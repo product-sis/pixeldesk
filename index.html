@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PixelDesk — Your Virtual Workspace</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+  :root {
+    --bg: #0d0d1a;
+    --floor: #1a1a2e;
+    --wall: #16213e;
+    --accent: #e94560;
+    --green: #0fff50;
+    --yellow: #ffd700;
+    --blue: #00d4ff;
+    --purple: #9d4edd;
+    --text: #e0e0e0;
+    --dim: #666;
+    --panel: #111122;
+    --border: #2a2a4a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    cursor: crosshair;
+  }
+
+  /* SCANLINE OVERLAY */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* ======= SCREENS ======= */
+  .screen { 
+    position: absolute; inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .screen.active { display: flex; }
+
+  /* ======= CLOCK-IN SCREEN ======= */
+  #clockin-screen {
+    background: radial-gradient(ellipse at center, #0d0d2e 0%, #05050f 100%);
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .ci-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    max-width: 600px;
+    width: 90%;
+  }
+
+  .logo-area {
+    text-align: center;
+  }
+
+  .logo-pixel {
+    display: inline-block;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 28px;
+    color: var(--green);
+    text-shadow: 0 0 20px rgba(15,255,80,0.6), 4px 4px 0 rgba(15,255,80,0.2);
+    letter-spacing: 2px;
+    animation: flicker 4s infinite;
+  }
+
+  .logo-sub {
+    font-size: 20px;
+    color: var(--dim);
+    margin-top: 8px;
+    letter-spacing: 4px;
+  }
+
+  @keyframes flicker {
+    0%,95%,100% { opacity: 1; }
+    96% { opacity: 0.4; }
+    97% { opacity: 1; }
+    98% { opacity: 0.3; }
+    99% { opacity: 1; }
+  }
+
+  .pixel-character-preview {
+    position: relative;
+    width: 80px;
+    height: 80px;
+  }
+
+  .office-scene-mini {
+    width: 100%;
+    height: 120px;
+    position: relative;
+    border: 2px solid var(--border);
+    background: var(--floor);
+    overflow: hidden;
+    border-radius: 4px;
+  }
+
+  .ci-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .field-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--accent);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .pixel-input {
+    width: 100%;
+    background: #0a0a18;
+    border: 2px solid var(--border);
+    color: var(--green);
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    caret-color: var(--green);
+  }
+
+  .pixel-input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 12px rgba(15,255,80,0.2);
+  }
+
+  .pixel-input::placeholder { color: #333; }
+
+  .task-list-input {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .task-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .task-input-row .pixel-input {
+    flex: 1;
+  }
+
+  .task-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--yellow);
+    width: 20px;
+    text-align: right;
+  }
+
+  .session-options {
+    display: flex;
+    gap: 10px;
+  }
+
+  .session-btn {
+    flex: 1;
+    padding: 10px 8px;
+    background: #0a0a18;
+    border: 2px solid var(--border);
+    color: var(--dim);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .session-btn:hover, .session-btn.selected {
+    border-color: var(--blue);
+    color: var(--blue);
+    box-shadow: 0 0 10px rgba(0,212,255,0.2);
+  }
+
+  .session-btn.selected {
+    background: rgba(0,212,255,0.08);
+  }
+
+  .clock-in-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--green);
+    border: none;
+    color: #000;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .clock-in-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 4px;
+    background: rgba(0,0,0,0.3);
+  }
+
+  .clock-in-btn:hover {
+    background: #fff;
+    box-shadow: 0 0 24px rgba(15,255,80,0.5);
+    transform: translateY(-2px);
+  }
+
+  .clock-in-btn:active { transform: translateY(0); }
+
+  /* ======= MAIN WORKSPACE ======= */
+  #workspace-screen {
+    flex-direction: column;
+    background: var(--bg);
+    gap: 0;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    width: 100%;
+    height: 48px;
+    background: var(--panel);
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 20px;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .topbar-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--green);
+    letter-spacing: 1px;
+  }
+
+  .topbar-divider {
+    width: 2px; height: 24px;
+    background: var(--border);
+  }
+
+  .topbar-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+  }
+
+  .status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.break { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  .status-dot.idle { background: var(--dim); box-shadow: none; animation: none; }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+  }
+
+  .topbar-time {
+    margin-left: auto;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--yellow);
+  }
+
+  .topbar-user {
+    font-size: 16px;
+    color: var(--blue);
+  }
+
+  /* MAIN LAYOUT */
+  .workspace-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .panel-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+
+  /* TIMER */
+  .timer-display {
+    text-align: center;
+  }
+
+  .timer-ring {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 12px;
+  }
+
+  .timer-ring svg {
+    transform: rotate(-90deg);
+  }
+
+  .timer-ring-bg {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 6;
+  }
+
+  .timer-ring-progress {
+    fill: none;
+    stroke: var(--green);
+    stroke-width: 6;
+    stroke-linecap: square;
+    stroke-dasharray: 283;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear, stroke 0.3s;
+    filter: drop-shadow(0 0 4px var(--green));
+  }
+
+  .timer-ring-progress.break-mode {
+    stroke: var(--yellow);
+    filter: drop-shadow(0 0 4px var(--yellow));
+  }
+
+  .timer-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .timer-digits {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .timer-label {
+    font-size: 12px;
+    color: var(--dim);
+    margin-top: 4px;
+  }
+
+  .timer-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  .t-btn {
+    padding: 6px 10px;
+    background: #0a0a18;
+    border: 2px solid var(--border);
+    color: var(--text);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .t-btn:hover { border-color: var(--green); color: var(--green); }
+  .t-btn.active { border-color: var(--green); color: var(--green); background: rgba(15,255,80,0.08); }
+
+  /* TASKS */
+  .tasks-section { flex: 1; }
+
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1.3;
+    transition: color 0.2s;
+  }
+
+  .task-item:hover { color: var(--blue); }
+
+  .task-checkbox {
+    width: 12px; height: 12px;
+    border: 2px solid var(--dim);
+    flex-shrink: 0;
+    margin-top: 3px;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .task-item.done .task-checkbox {
+    background: var(--green);
+    border-color: var(--green);
+  }
+
+  .task-item.done .task-checkbox::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: var(--green);
+  }
+
+  .task-item.done .task-text {
+    text-decoration: line-through;
+    color: var(--dim);
+  }
+
+  /* SESSIONS COUNTER */
+  .sessions-section { }
+
+  .pomodoro-dots {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .pomo-dot {
+    width: 14px; height: 14px;
+    background: var(--border);
+    border: 2px solid var(--border);
+  }
+
+  .pomo-dot.done {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  /* OFFICE CANVAS */
+  .office-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--floor);
+  }
+
+  canvas#office {
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  /* FLOATING CHAT */
+  .float-msg {
+    position: absolute;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    padding: 6px 12px;
+    font-size: 16px;
+    color: var(--text);
+    pointer-events: none;
+    white-space: nowrap;
+    animation: floatUp 3s ease-out forwards;
+    z-index: 50;
+  }
+
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-40px); }
+  }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    width: 200px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-left: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .online-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 16px;
+  }
+
+  .user-avatar {
+    width: 28px; height: 28px;
+    flex-shrink: 0;
+    image-rendering: pixelated;
+  }
+
+  .user-info { flex: 1; }
+  .user-name { color: var(--text); line-height: 1; }
+  .user-status { font-size: 14px; color: var(--dim); }
+
+  .user-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+
+  .user-dot.busy { background: var(--accent); }
+  .user-dot.break { background: var(--yellow); }
+
+  /* BOTTOM STATUS BAR */
+  .statusbar {
+    width: 100%;
+    height: 32px;
+    background: var(--panel);
+    border-top: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 20px;
+    flex-shrink: 0;
+    font-size: 14px;
+    color: var(--dim);
+  }
+
+  .statusbar span { display: flex; align-items: center; gap: 6px; }
+  .statusbar .sb-accent { color: var(--green); }
+
+  .clock-out-btn {
+    margin-left: auto;
+    padding: 4px 12px;
+    background: transparent;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+  }
+
+  .clock-out-btn:hover {
+    background: var(--accent);
+    color: #000;
+  }
+
+  /* ======= CLOCK-OUT SCREEN ======= */
+  #clockout-screen {
+    background: radial-gradient(ellipse at center, #0d1a0d 0%, #05050f 100%);
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .summary-card {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    padding: 28px;
+    width: 90%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .summary-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: var(--green);
+    text-align: center;
+  }
+
+  .summary-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 18px;
+  }
+
+  .summary-stat .label { color: var(--dim); }
+  .summary-stat .value { color: var(--yellow); font-family: 'Press Start 2P', monospace; font-size: 10px; }
+
+  .task-summary { display: flex; flex-direction: column; gap: 6px; }
+
+  .task-summary-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+  }
+
+  .check-icon { color: var(--green); }
+  .cross-icon { color: var(--dim); }
+
+  .focus-score {
+    text-align: center;
+    padding: 16px 0;
+  }
+
+  .score-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 36px;
+    color: var(--green);
+    display: block;
+    text-shadow: 0 0 20px rgba(15,255,80,0.5);
+  }
+
+  .score-label { color: var(--dim); font-size: 16px; }
+
+  .new-session-btn {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 2px solid var(--green);
+    color: var(--green);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+
+  .new-session-btn:hover {
+    background: var(--green);
+    color: #000;
+    box-shadow: 0 0 20px rgba(15,255,80,0.3);
+  }
+
+  /* PIXEL ART ELEMENTS via CSS */
+  .pixel-desk {
+    image-rendering: pixelated;
+  }
+
+  /* NOTIFICATION */
+  .notif {
+    position: fixed;
+    bottom: 48px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--panel);
+    border: 2px solid var(--yellow);
+    color: var(--yellow);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    padding: 10px 20px;
+    z-index: 100;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  .notif.show { transform: translateX(-50%) translateY(0); }
+
+  /* INTRO ANIMATION */
+  .ci-container { animation: slideUp 0.5s ease-out; }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* STARS BG */
+  .stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .star {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: white;
+    opacity: 0;
+    animation: twinkle var(--d) var(--delay) infinite;
+  }
+
+  @keyframes twinkle {
+    0%,100% { opacity: 0; }
+    50% { opacity: var(--op); }
+  }
+
+  .ci-container { position: relative; z-index: 1; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+</style>
+</head>
+<body>
+
+<!-- CLOCK IN SCREEN -->
+<div id="clockin-screen" class="screen active">
+  <div class="stars" id="stars"></div>
+  <div class="ci-container">
+    <div class="logo-area">
+      <div class="logo-pixel">PIXELDESK</div>
+      <div class="logo-sub">YOUR VIRTUAL WORKSPACE</div>
+    </div>
+
+    <div class="ci-form">
+      <div>
+        <span class="field-label">► YOUR NAME</span>
+        <input class="pixel-input" id="username-input" placeholder="enter your name..." maxlength="20" autocomplete="off">
+      </div>
+
+      <div>
+        <span class="field-label">► TODAY'S TASKS (UP TO 3)</span>
+        <div class="task-list-input">
+          <div class="task-input-row">
+            <span class="task-num">01</span>
+            <input class="pixel-input" id="task1" placeholder="what are you working on?" autocomplete="off">
+          </div>
+          <div class="task-input-row">
+            <span class="task-num">02</span>
+            <input class="pixel-input" id="task2" placeholder="optional..." autocomplete="off">
+          </div>
+          <div class="task-input-row">
+            <span class="task-num">03</span>
+            <input class="pixel-input" id="task3" placeholder="optional..." autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <span class="field-label">► SESSION TYPE</span>
+        <div class="session-options">
+          <button class="session-btn selected" data-mins="25" onclick="selectSession(this, 25)">
+            POMODORO<br><span style="color:var(--green);margin-top:4px;display:block">25 MIN</span>
+          </button>
+          <button class="session-btn" data-mins="50" onclick="selectSession(this, 50)">
+            DEEP WORK<br><span style="color:var(--green);margin-top:4px;display:block">50 MIN</span>
+          </button>
+          <button class="session-btn" data-mins="90" onclick="selectSession(this, 90)">
+            FLOW STATE<br><span style="color:var(--green);margin-top:4px;display:block">90 MIN</span>
+          </button>
+        </div>
+      </div>
+
+      <button class="clock-in-btn" onclick="clockIn()">► CLOCK IN ◄</button>
+    </div>
+  </div>
+</div>
+
+<!-- WORKSPACE SCREEN -->
+<div id="workspace-screen" class="screen">
+
+  <div class="topbar">
+    <span class="topbar-logo">PIXELDESK</span>
+    <div class="topbar-divider"></div>
+    <div class="topbar-status">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">DEEP FOCUS</span>
+    </div>
+    <div class="topbar-divider"></div>
+    <span class="topbar-user" id="topbar-user">ANON</span>
+    <span class="topbar-time" id="topbar-clock">00:00</span>
+  </div>
+
+  <div class="workspace-body">
+
+    <!-- LEFT: TIMER + TASKS -->
+    <div class="left-panel">
+
+      <div class="timer-display">
+        <div class="panel-title">► FOCUS TIMER</div>
+        <div class="timer-ring">
+          <svg width="120" height="120" viewBox="0 0 100 100">
+            <circle class="timer-ring-bg" cx="50" cy="50" r="45"/>
+            <circle class="timer-ring-progress" id="ring-progress" cx="50" cy="50" r="45"/>
+          </svg>
+          <div class="timer-text">
+            <span class="timer-digits" id="timer-digits">25:00</span>
+            <span class="timer-label" id="timer-mode-label">FOCUS</span>
+          </div>
+        </div>
+        <div class="timer-controls">
+          <button class="t-btn" id="btn-start" onclick="toggleTimer()">START</button>
+          <button class="t-btn" onclick="resetTimer()">RESET</button>
+        </div>
+        <div style="margin-top:10px;">
+          <button class="t-btn" onclick="startBreak()" style="width:100%;font-size:6px;">TAKE BREAK (5 MIN)</button>
+        </div>
+      </div>
+
+      <div class="tasks-section">
+        <div class="panel-title">► TODAY'S QUESTS</div>
+        <div id="task-list"></div>
+      </div>
+
+      <div class="sessions-section">
+        <div class="panel-title">► SESSIONS</div>
+        <div class="pomodoro-dots" id="pomo-dots">
+          <div class="pomo-dot"></div>
+          <div class="pomo-dot"></div>
+          <div class="pomo-dot"></div>
+          <div class="pomo-dot"></div>
+          <div class="pomo-dot"></div>
+          <div class="pomo-dot"></div>
+          <div class="pomo-dot"></div>
+          <div class="pomo-dot"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CENTER: PIXEL OFFICE -->
+    <div class="office-area" id="office-area">
+      <canvas id="office"></canvas>
+    </div>
+
+    <!-- RIGHT: ONLINE USERS -->
+    <div class="right-panel">
+      <div>
+        <div class="panel-title">► ONLINE NOW</div>
+        <div id="users-list"></div>
+        <div style="margin-top:12px;font-size:14px;color:var(--dim);line-height:1.6">
+          Multiplayer<br>coming soon.<br><br>Share a link<br>to invite<br>your crew.
+        </div>
+      </div>
+
+      <div style="margin-top:auto">
+        <div class="panel-title">► VIBE</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="t-btn" style="width:100%;font-size:7px;" onclick="setVibe('lofi')">◉ LO-FI</button>
+          <button class="t-btn" style="width:100%;font-size:7px;" onclick="setVibe('rain')">◉ RAIN</button>
+          <button class="t-btn" style="width:100%;font-size:7px;" onclick="setVibe('cafe')">◉ CAFÉ</button>
+          <button class="t-btn" style="width:100%;font-size:7px;" onclick="setVibe('off')">○ OFF</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="statusbar">
+    <span>SESSION: <span class="sb-accent" id="session-elapsed">00:00</span></span>
+    <span>TASKS: <span class="sb-accent" id="sb-tasks">0/0</span></span>
+    <span id="sb-vibe" style="color:var(--purple)"></span>
+    <button class="clock-out-btn" onclick="clockOut()">CLOCK OUT</button>
+  </div>
+
+</div>
+
+<!-- CLOCK OUT SCREEN -->
+<div id="clockout-screen" class="screen">
+  <div class="summary-card">
+    <div class="summary-title">SESSION COMPLETE!</div>
+
+    <div class="focus-score">
+      <span class="score-num" id="score-display">--</span>
+      <span class="score-label">FOCUS SCORE</span>
+    </div>
+
+    <div class="summary-stat">
+      <span class="label">Time Worked</span>
+      <span class="value" id="co-time">00:00</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Sessions Done</span>
+      <span class="value" id="co-sessions">0</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Tasks Complete</span>
+      <span class="value" id="co-tasks">0/0</span>
+    </div>
+
+    <div>
+      <div class="panel-title" style="margin-bottom:10px">► QUEST LOG</div>
+      <div class="task-summary" id="co-task-list"></div>
+    </div>
+
+    <button class="new-session-btn" onclick="newSession()">► START NEW SESSION ◄</button>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<script>
+// ============ STATE ============
+let state = {
+  username: '',
+  tasks: [],
+  sessionMins: 25,
+  timerSecs: 25 * 60,
+  timerMax: 25 * 60,
+  timerRunning: false,
+  timerInterval: null,
+  isBreak: false,
+  sessionsCompleted: 0,
+  sessionStartTime: null,
+  totalElapsed: 0,
+  elapsedInterval: null,
+  clockInterval: null,
+  vibeAudio: null,
+  currentVibe: null,
+};
+
+// ============ STARS BG ============
+function initStars() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 100 + '%';
+    s.style.setProperty('--d', (2 + Math.random() * 4) + 's');
+    s.style.setProperty('--delay', (Math.random() * 4) + 's');
+    s.style.setProperty('--op', (0.3 + Math.random() * 0.7).toString());
+    c.appendChild(s);
+  }
+}
+initStars();
+
+// ============ SESSION SELECT ============
+function selectSession(btn, mins) {
+  document.querySelectorAll('.session-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  state.sessionMins = mins;
+}
+
+// ============ CLOCK IN ============
+function clockIn() {
+  const name = document.getElementById('username-input').value.trim() || 'WORKER';
+  const t1 = document.getElementById('task1').value.trim();
+  const t2 = document.getElementById('task2').value.trim();
+  const t3 = document.getElementById('task3').value.trim();
+
+  state.username = name.toUpperCase();
+  state.tasks = [t1, t2, t3].filter(t => t).map(t => ({ text: t, done: false }));
+  if (state.tasks.length === 0) state.tasks = [{ text: 'GET STUFF DONE', done: false }];
+
+  state.timerSecs = state.sessionMins * 60;
+  state.timerMax = state.sessionMins * 60;
+  state.sessionsCompleted = 0;
+  state.sessionStartTime = Date.now();
+  state.totalElapsed = 0;
+
+  // transition
+  document.getElementById('clockin-screen').classList.remove('active');
+  document.getElementById('workspace-screen').classList.add('active');
+
+  initWorkspace();
+  showNotif('CLOCKED IN. LET\'S GET IT. 🟢');
+}
+
+// ============ WORKSPACE INIT ============
+function initWorkspace() {
+  document.getElementById('topbar-user').textContent = state.username;
+  renderTasks();
+  updateTimerDisplay();
+  startClock();
+  startElapsed();
+  initOfficeCanvas();
+  renderUsers();
+  updateStatusBar();
+}
+
+function renderTasks() {
+  const list = document.getElementById('task-list');
+  list.innerHTML = '';
+  state.tasks.forEach((task, i) => {
+    const el = document.createElement('div');
+    el.className = 'task-item' + (task.done ? ' done' : '');
+    el.innerHTML = `<div class="task-checkbox"></div><span class="task-text">${task.text}</span>`;
+    el.onclick = () => toggleTask(i);
+    list.appendChild(el);
+  });
+  updateStatusBar();
+}
+
+function toggleTask(i) {
+  state.tasks[i].done = !state.tasks[i].done;
+  renderTasks();
+  if (state.tasks[i].done) {
+    showNotif('QUEST COMPLETE! ✓');
+    spawnFloatMsg('✓ TASK DONE!', 400, 300);
+  }
+}
+
+function updateStatusBar() {
+  const done = state.tasks.filter(t => t.done).length;
+  document.getElementById('sb-tasks').textContent = done + '/' + state.tasks.length;
+}
+
+// ============ CLOCK ============
+function startClock() {
+  function tick() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('topbar-clock').textContent = h + ':' + m;
+  }
+  tick();
+  state.clockInterval = setInterval(tick, 10000);
+}
+
+function startElapsed() {
+  state.elapsedInterval = setInterval(() => {
+    state.totalElapsed++;
+    const m = Math.floor(state.totalElapsed / 60);
+    const s = state.totalElapsed % 60;
+    document.getElementById('session-elapsed').textContent =
+      String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }, 1000);
+}
+
+// ============ TIMER ============
+function updateTimerDisplay() {
+  const m = Math.floor(state.timerSecs / 60);
+  const s = state.timerSecs % 60;
+  document.getElementById('timer-digits').textContent =
+    String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+
+  const progress = state.timerSecs / state.timerMax;
+  const circumference = 283;
+  const offset = circumference * (1 - progress);
+  const ring = document.getElementById('ring-progress');
+  ring.style.strokeDashoffset = offset;
+
+  if (state.isBreak) {
+    ring.classList.add('break-mode');
+    document.getElementById('timer-mode-label').textContent = 'BREAK';
+  } else {
+    ring.classList.remove('break-mode');
+    document.getElementById('timer-mode-label').textContent =
+      state.sessionMins === 25 ? 'POMODORO' : state.sessionMins === 50 ? 'DEEP WORK' : 'FLOW';
+  }
+}
+
+function toggleTimer() {
+  if (state.timerRunning) {
+    clearInterval(state.timerInterval);
+    state.timerRunning = false;
+    document.getElementById('btn-start').textContent = 'START';
+    document.getElementById('status-dot').className = 'status-dot idle';
+    document.getElementById('status-text').textContent = 'PAUSED';
+  } else {
+    state.timerRunning = true;
+    document.getElementById('btn-start').textContent = 'PAUSE';
+    document.getElementById('status-dot').className = 'status-dot';
+    document.getElementById('status-text').textContent = state.isBreak ? 'ON BREAK' : 'DEEP FOCUS';
+    state.timerInterval = setInterval(() => {
+      state.timerSecs--;
+      updateTimerDisplay();
+      animateChar();
+      if (state.timerSecs <= 0) {
+        timerDone();
+      }
+    }, 1000);
+  }
+}
+
+function resetTimer() {
+  clearInterval(state.timerInterval);
+  state.timerRunning = false;
+  state.isBreak = false;
+  state.timerSecs = state.sessionMins * 60;
+  state.timerMax = state.sessionMins * 60;
+  document.getElementById('btn-start').textContent = 'START';
+  updateTimerDisplay();
+}
+
+function startBreak() {
+  clearInterval(state.timerInterval);
+  state.timerRunning = false;
+  state.isBreak = true;
+  state.timerSecs = 5 * 60;
+  state.timerMax = 5 * 60;
+  document.getElementById('btn-start').textContent = 'START';
+  document.getElementById('status-dot').className = 'status-dot break';
+  document.getElementById('status-text').textContent = 'ON BREAK';
+  updateTimerDisplay();
+  showNotif('BREAK TIME! STRETCH IT OUT. ☕');
+}
+
+function timerDone() {
+  clearInterval(state.timerInterval);
+  state.timerRunning = false;
+  document.getElementById('btn-start').textContent = 'START';
+
+  if (!state.isBreak) {
+    state.sessionsCompleted++;
+    const dots = document.querySelectorAll('.pomo-dot');
+    if (state.sessionsCompleted <= dots.length) {
+      dots[state.sessionsCompleted - 1].classList.add('done');
+    }
+    showNotif('SESSION DONE! TAKE A BREAK. 🎉');
+    spawnFloatMsg('🎉 SESSION COMPLETE!', 400, 200);
+  } else {
+    state.isBreak = false;
+    state.timerSecs = state.sessionMins * 60;
+    state.timerMax = state.sessionMins * 60;
+    showNotif('BREAK OVER. BACK TO WORK! ⚡');
+  }
+  updateTimerDisplay();
+}
+
+// ============ CLOCK OUT ============
+function clockOut() {
+  clearInterval(state.timerInterval);
+  clearInterval(state.elapsedInterval);
+  clearInterval(state.clockInterval);
+  state.timerRunning = false;
+
+  const m = Math.floor(state.totalElapsed / 60);
+  const s = state.totalElapsed % 60;
+  const timeStr = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  const doneTasks = state.tasks.filter(t => t.done).length;
+  const totalTasks = state.tasks.length;
+
+  // score calc
+  const taskScore = totalTasks > 0 ? (doneTasks / totalTasks) * 40 : 20;
+  const sessionScore = Math.min(state.sessionsCompleted * 15, 40);
+  const timeScore = Math.min(Math.floor(state.totalElapsed / 60) * 0.5, 20);
+  const score = Math.round(taskScore + sessionScore + timeScore);
+
+  document.getElementById('co-time').textContent = timeStr;
+  document.getElementById('co-sessions').textContent = state.sessionsCompleted;
+  document.getElementById('co-tasks').textContent = doneTasks + '/' + totalTasks;
+  document.getElementById('score-display').textContent = score;
+
+  const coList = document.getElementById('co-task-list');
+  coList.innerHTML = state.tasks.map(t =>
+    `<div class="task-summary-item">
+      <span class="${t.done ? 'check-icon' : 'cross-icon'}">${t.done ? '✓' : '○'}</span>
+      <span style="color:${t.done ? 'var(--text)' : 'var(--dim)'}">${t.text}</span>
+    </div>`
+  ).join('');
+
+  document.getElementById('workspace-screen').classList.remove('active');
+  document.getElementById('clockout-screen').classList.add('active');
+}
+
+function newSession() {
+  document.getElementById('clockout-screen').classList.remove('active');
+  document.getElementById('clockin-screen').classList.add('active');
+  // reset
+  state.timerRunning = false;
+  state.isBreak = false;
+  state.sessionsCompleted = 0;
+  state.totalElapsed = 0;
+  document.querySelectorAll('.pomo-dot').forEach(d => d.classList.remove('done'));
+  document.getElementById('task1').value = '';
+  document.getElementById('task2').value = '';
+  document.getElementById('task3').value = '';
+}
+
+// ============ PIXEL OFFICE CANVAS ============
+const TILE = 32;
+const COLORS = {
+  floor1: '#1e1e3a',
+  floor2: '#181830',
+  wall: '#0d0d20',
+  desk: '#3d2b1a',
+  deskTop: '#4a3520',
+  monitor: '#111',
+  screen: '#00d4ff',
+  screenGlow: '#003344',
+  plant: '#1a4a1a',
+  plantLeaf: '#2d8a2d',
+  chair: '#222244',
+  chairBack: '#2a2a5a',
+  window: '#001133',
+  windowLight: '#002255',
+  rug: '#2a1a2a',
+  lamp: '#c8a020',
+  lampGlow: '#332200',
+  char: '#e94560',
+  charBody: '#3a3a6a',
+  charHead: '#f4c07a',
+  coffee: '#6a3a1a',
+};
+
+let charX = 0, charY = 0;
+let charFrame = 0;
+let charAnim = 0;
+let charDir = 1; // 1 = right, -1 = left
+
+function initOfficeCanvas() {
+  const area = document.getElementById('office-area');
+  const canvas = document.getElementById('office');
+  const W = area.clientWidth;
+  const H = area.clientHeight;
+  canvas.width = W;
+  canvas.height = H;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
+  charX = Math.floor(W / 2);
+  charY = Math.floor(H / 2);
+
+  drawOffice();
+}
+
+function drawOffice() {
+  const canvas = document.getElementById('office');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Floor checkerboard
+  for (let y = 0; y < Math.ceil(H / TILE) + 1; y++) {
+    for (let x = 0; x < Math.ceil(W / TILE) + 1; x++) {
+      ctx.fillStyle = (x + y) % 2 === 0 ? COLORS.floor1 : COLORS.floor2;
+      ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+    }
+  }
+
+  // Rug
+  ctx.fillStyle = COLORS.rug;
+  roundRect(ctx, W/2 - 120, H/2 - 60, 240, 120, 0);
+  ctx.fillStyle = '#3a1a3a';
+  ctx.strokeStyle = '#4a2a4a';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(W/2 - 110, H/2 - 50, 220, 100);
+
+  // Back wall hint
+  ctx.fillStyle = COLORS.wall;
+  ctx.fillRect(0, 0, W, 80);
+  ctx.fillStyle = '#1a1a35';
+  ctx.fillRect(0, 78, W, 4);
+
+  // Window
+  drawWindow(ctx, W/2 - 80, 10, 160, 65);
+
+  // Plant left
+  drawPlant(ctx, 60, H/2 + 20);
+
+  // Plant right
+  drawPlant(ctx, W - 80, H/2 + 20);
+
+  // Desk 1 - center (player desk)
+  drawDesk(ctx, W/2 - 60, H/2 - 40, true);
+
+  // Desk 2 - left
+  drawDesk(ctx, 80, H/2 - 20, false);
+
+  // Desk 3 - right
+  drawDesk(ctx, W - 180, H/2 - 20, false);
+
+  // Lamp
+  drawLamp(ctx, W/2 + 70, H/2 - 55);
+
+  // Draw player character
+  drawChar(ctx, charX, charY, COLORS.char, COLORS.charBody, charFrame, state.timerRunning && !state.isBreak);
+
+  // NPC chars (placeholder coworkers)
+  drawChar(ctx, 100, H/2 + 10, '#9d4edd', '#2a2a5a', Math.floor(charFrame / 2) % 2, false);
+  drawChar(ctx, W - 150, H/2 + 10, '#ffd700', '#1a3a1a', (charFrame + 1) % 2, false);
+
+  // Coffee cup on player desk
+  drawCoffee(ctx, W/2 + 10, H/2 - 32);
+}
+
+function drawDesk(ctx, x, y, isPlayer) {
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(x - 2, y + 54, 124, 8);
+
+  // Desk body
+  ctx.fillStyle = COLORS.desk;
+  ctx.fillRect(x, y + 16, 120, 40);
+
+  // Desk top surface
+  ctx.fillStyle = COLORS.deskTop;
+  ctx.fillRect(x, y + 12, 120, 8);
+
+  // Desk legs
+  ctx.fillStyle = '#2a1a0a';
+  ctx.fillRect(x + 6, y + 52, 8, 10);
+  ctx.fillRect(x + 106, y + 52, 8, 10);
+
+  // Monitor
+  ctx.fillStyle = COLORS.monitor;
+  ctx.fillRect(x + 30, y - 24, 60, 38);
+
+  // Screen glow
+  ctx.fillStyle = isPlayer ? COLORS.screenGlow : '#001122';
+  ctx.fillRect(x + 33, y - 21, 54, 32);
+
+  // Screen content
+  if (isPlayer) {
+    ctx.fillStyle = COLORS.screen;
+    // Fake text lines on screen
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(x + 37, y - 17 + i * 7, 20 + (i % 2) * 12, 3);
+    }
+    ctx.fillStyle = COLORS.green;
+    ctx.fillRect(x + 37, y - 17 + 4 * 7, 8, 3); // cursor
+  } else {
+    ctx.fillStyle = '#002244';
+    ctx.fillRect(x + 33, y - 21, 54, 32);
+  }
+
+  // Monitor stand
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(x + 55, y + 12, 10, 4);
+
+  // Chair
+  ctx.fillStyle = COLORS.chairBack;
+  ctx.fillRect(x + 40, y + 40, 40, 18);
+  ctx.fillStyle = COLORS.chair;
+  ctx.fillRect(x + 38, y + 54, 44, 8);
+
+  // Keyboard (player desk)
+  if (isPlayer) {
+    ctx.fillStyle = '#222233';
+    ctx.fillRect(x + 28, y + 18, 48, 10);
+    ctx.fillStyle = '#333344';
+    for (let ki = 0; ki < 8; ki++) {
+      ctx.fillRect(x + 30 + ki * 5, y + 20, 4, 3);
+    }
+    for (let ki = 0; ki < 7; ki++) {
+      ctx.fillRect(x + 32 + ki * 5, y + 24, 4, 3);
+    }
+  }
+}
+
+function drawChar(ctx, x, y, headColor, bodyColor, frame, typing) {
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(x, y + 2, 10, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = bodyColor;
+  ctx.fillRect(x - 6, y - 14, 12, 12);
+
+  // Arms (typing animation)
+  ctx.fillStyle = bodyColor;
+  if (typing) {
+    const armOff = frame % 2 === 0 ? 0 : 2;
+    ctx.fillRect(x - 10, y - 12 + armOff, 4, 6);
+    ctx.fillRect(x + 6, y - 12 + (1 - armOff/2), 4, 6);
+  } else {
+    ctx.fillRect(x - 10, y - 12, 4, 6);
+    ctx.fillRect(x + 6, y - 12, 4, 6);
+  }
+
+  // Head
+  ctx.fillStyle = headColor;
+  ctx.fillRect(x - 7, y - 26, 14, 12);
+
+  // Eyes
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 4, y - 22, 3, 3);
+  ctx.fillRect(x + 1, y - 22, 3, 3);
+
+  // Glasses on player
+  if (headColor === COLORS.char) {
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x - 5, y - 23, 5, 4);
+    ctx.strokeRect(x, y - 23, 5, 4);
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x - 5, y - 21, 1, 1);
+    ctx.fillRect(x + 4, y - 21, 1, 1);
+  }
+
+  // Hair
+  ctx.fillStyle = headColor === COLORS.char ? '#c04040' : (headColor === '#9d4edd' ? '#5a1a9a' : '#b8860b');
+  ctx.fillRect(x - 7, y - 28, 14, 4);
+  ctx.fillRect(x - 9, y - 26, 3, 4);
+
+  // Name tag (player only)
+  if (headColor === COLORS.char && state.username) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    const nameW = state.username.length * 5 + 8;
+    ctx.fillRect(x - nameW/2, y - 36, nameW, 10);
+    ctx.fillStyle = COLORS.char;
+    ctx.font = '8px "Press Start 2P"';
+    ctx.textAlign = 'center';
+    ctx.fillText(state.username.substring(0, 6), x, y - 29);
+  }
+
+  ctx.textAlign = 'left';
+}
+
+function drawWindow(ctx, x, y, w, h) {
+  // Frame
+  ctx.fillStyle = '#2a2a4a';
+  ctx.fillRect(x, y, w, h);
+
+  // Sky gradient
+  const sky = ctx.createLinearGradient(x, y, x, y + h);
+  sky.addColorStop(0, '#000d33');
+  sky.addColorStop(1, '#001155');
+  ctx.fillStyle = sky;
+  ctx.fillRect(x + 4, y + 4, w - 8, h - 8);
+
+  // Stars in window
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  const wstars = [[10,8],[30,5],[50,12],[80,6],[120,9],[100,15],[140,7],[20,18]];
+  wstars.forEach(([sx, sy]) => {
+    if (sx < w - 8 && sy < h - 8) {
+      ctx.fillRect(x + 4 + sx, y + 4 + sy, 2, 2);
+    }
+  });
+
+  // Window dividers
+  ctx.fillStyle = '#2a2a4a';
+  ctx.fillRect(x + w/2 - 1, y, 2, h);
+  ctx.fillRect(x, y + h/2 - 1, w, 2);
+
+  // Glow below window
+  const glowGrad = ctx.createLinearGradient(0, y + h, 0, y + h + 30);
+  glowGrad.addColorStop(0, 'rgba(0,50,150,0.15)');
+  glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glowGrad;
+  ctx.fillRect(x - 10, y + h, w + 20, 30);
+}
+
+function drawPlant(ctx, x, y) {
+  // Pot
+  ctx.fillStyle = '#6a3a2a';
+  ctx.fillRect(x - 10, y, 20, 16);
+  ctx.fillStyle = '#4a2a1a';
+  ctx.fillRect(x - 12, y, 24, 5);
+
+  // Soil
+  ctx.fillStyle = '#2a1a0a';
+  ctx.fillRect(x - 8, y + 2, 16, 3);
+
+  // Stem
+  ctx.fillStyle = COLORS.plant;
+  ctx.fillRect(x - 1, y - 20, 3, 22);
+
+  // Leaves
+  ctx.fillStyle = COLORS.plantLeaf;
+  ctx.fillRect(x - 14, y - 18, 14, 8);
+  ctx.fillRect(x + 2, y - 26, 12, 8);
+  ctx.fillRect(x - 10, y - 32, 12, 8);
+
+  // Leaf veins
+  ctx.fillStyle = COLORS.plant;
+  ctx.fillRect(x - 10, y - 15, 8, 1);
+  ctx.fillRect(x + 4, y - 23, 7, 1);
+}
+
+function drawLamp(ctx, x, y) {
+  // Stand
+  ctx.fillStyle = '#666';
+  ctx.fillRect(x - 2, y, 4, 20);
+  ctx.fillRect(x - 8, y + 18, 16, 3);
+
+  // Shade
+  ctx.fillStyle = '#c8a020';
+  ctx.beginPath();
+  ctx.moveTo(x - 14, y);
+  ctx.lineTo(x + 14, y);
+  ctx.lineTo(x + 8, y - 16);
+  ctx.lineTo(x - 8, y - 16);
+  ctx.closePath();
+  ctx.fill();
+
+  // Glow circle
+  const grad = ctx.createRadialGradient(x, y + 6, 0, x, y + 6, 40);
+  grad.addColorStop(0, 'rgba(255,220,100,0.12)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y + 6, 40, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawCoffee(ctx, x, y) {
+  ctx.fillStyle = COLORS.coffee;
+  ctx.fillRect(x, y, 12, 10);
+  ctx.fillStyle = '#3a1a08';
+  ctx.fillRect(x + 2, y + 2, 8, 4);
+  // Handle
+  ctx.fillStyle = COLORS.coffee;
+  ctx.fillRect(x + 12, y + 2, 3, 5);
+  // Steam
+  ctx.fillStyle = 'rgba(200,200,200,0.4)';
+  ctx.fillRect(x + 3, y - 4, 2, 3);
+  ctx.fillRect(x + 7, y - 6, 2, 5);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ============ CHAR ANIMATION ============
+let animTick = 0;
+function animateChar() {
+  animTick++;
+  if (animTick % 8 === 0) {
+    charFrame = (charFrame + 1) % 4;
+    drawOffice();
+  }
+}
+
+// Idle animation when not typing
+setInterval(() => {
+  if (!state.timerRunning) {
+    charFrame = (charFrame + 1) % 4;
+    if (document.getElementById('workspace-screen').classList.contains('active')) {
+      drawOffice();
+    }
+  }
+}, 600);
+
+// ============ FAKE USERS ============
+function renderUsers() {
+  const list = document.getElementById('users-list');
+  const fakeUsers = [
+    { name: 'ALEX', status: 'deep work', color: '#9d4edd', dot: 'busy' },
+    { name: 'SAM', status: 'break', color: '#ffd700', dot: 'break' },
+  ];
+
+  list.innerHTML = [
+    `<div class="online-user">
+      <canvas class="user-avatar" width="28" height="28" id="av-you"></canvas>
+      <div class="user-info">
+        <div class="user-name">${state.username || 'YOU'}</div>
+        <div class="user-status">online</div>
+      </div>
+      <div class="user-dot"></div>
+    </div>`,
+    ...fakeUsers.map(u => `<div class="online-user">
+      <div style="width:28px;height:28px;background:${u.color}22;border:1px solid ${u.color};display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P';font-size:7px;color:${u.color}">${u.name[0]}</div>
+      <div class="user-info">
+        <div class="user-name">${u.name}</div>
+        <div class="user-status">${u.status}</div>
+      </div>
+      <div class="user-dot ${u.dot}"></div>
+    </div>`)
+  ].join('');
+
+  // Draw mini avatar
+  setTimeout(() => {
+    const av = document.getElementById('av-you');
+    if (av) {
+      const ctx = av.getContext('2d');
+      ctx.fillStyle = COLORS.charBody;
+      ctx.fillRect(9, 14, 10, 10);
+      ctx.fillStyle = COLORS.char;
+      ctx.fillRect(8, 6, 12, 10);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(10, 9, 3, 3);
+      ctx.fillRect(15, 9, 3, 3);
+      ctx.fillStyle = '#c04040';
+      ctx.fillRect(8, 4, 12, 4);
+    }
+  }, 50);
+}
+
+// ============ FLOAT MESSAGES ============
+function spawnFloatMsg(msg, x, y) {
+  const el = document.createElement('div');
+  el.className = 'float-msg';
+  el.textContent = msg;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  document.getElementById('office-area').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ============ VIBE (SIMPLE TONE GEN) ============
+let audioCtx = null;
+let vibeNodes = [];
+
+function setVibe(type) {
+  stopVibe();
+  document.getElementById('sb-vibe').textContent = '';
+
+  if (type === 'off') return;
+
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    if (type === 'rain') {
+      // White noise for rain
+      const bufSize = audioCtx.sampleRate * 2;
+      const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.15;
+      
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 800;
+      filter.Q.value = 0.5;
+      
+      const gain = audioCtx.createGain();
+      gain.gain.value = 0.4;
+      
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      src.start();
+      vibeNodes = [src, filter, gain];
+      document.getElementById('sb-vibe').textContent = '🌧 RAIN';
+
+    } else if (type === 'lofi') {
+      // Simple drone notes
+      const notes = [220, 277, 330, 415];
+      notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.value = 0.04;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        vibeNodes.push(osc, gain);
+      });
+      document.getElementById('sb-vibe').textContent = '🎵 LO-FI';
+
+    } else if (type === 'cafe') {
+      // Cafe murmur - layered noise + light tones
+      const bufSize = audioCtx.sampleRate * 3;
+      const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * 0.05 +
+          Math.sin(i * 0.003) * 0.02 +
+          Math.sin(i * 0.007) * 0.015;
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const gain = audioCtx.createGain();
+      gain.gain.value = 0.5;
+      src.connect(gain);
+      gain.connect(audioCtx.destination);
+      src.start();
+      vibeNodes = [src, gain];
+      document.getElementById('sb-vibe').textContent = '☕ CAFÉ';
+    }
+  } catch(e) {
+    document.getElementById('sb-vibe').textContent = '(audio blocked)';
+  }
+}
+
+function stopVibe() {
+  vibeNodes.forEach(n => { try { n.stop ? n.stop() : n.disconnect(); } catch(e){} });
+  vibeNodes = [];
+  if (audioCtx) { try { audioCtx.close(); } catch(e){} audioCtx = null; }
+}
+
+// ============ NOTIFICATION ============
+function showNotif(msg) {
+  const n = document.getElementById('notif');
+  n.textContent = msg;
+  n.classList.add('show');
+  setTimeout(() => n.classList.remove('show'), 3000);
+}
+
+// ============ KEYBOARD ============
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('clockin-screen').classList.contains('active')) {
+    clockIn();
+  }
+});
+
+// resize
+window.addEventListener('resize', () => {
+  if (document.getElementById('workspace-screen').classList.contains('active')) {
+    initOfficeCanvas();
+  }
+});
+</script>
+</body>
+</html>
