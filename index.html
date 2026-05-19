@@ -3,1731 +3,1010 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PixelDesk — Your Virtual Workspace</title>
+<title>PixelDesk — Virtual Coworking Space</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
 
   :root {
     --bg: #0d0d1a;
-    --floor: #1a1a2e;
-    --wall: #16213e;
     --accent: #e94560;
     --green: #0fff50;
     --yellow: #ffd700;
     --blue: #00d4ff;
     --purple: #9d4edd;
     --text: #e0e0e0;
-    --dim: #666;
+    --dim: #555;
     --panel: #111122;
     --border: #2a2a4a;
   }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'VT323',monospace; font-size:18px; overflow:hidden; height:100vh; width:100vw; cursor:crosshair; }
+  body::after { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px); pointer-events:none; z-index:999; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'VT323', monospace;
-    font-size: 18px;
-    overflow: hidden;
-    height: 100vh;
-    width: 100vw;
-    cursor: crosshair;
-  }
+  .screen { position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; }
+  .screen.active { display:flex; }
 
-  /* SCANLINE OVERLAY */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.08) 2px,
-      rgba(0,0,0,0.08) 4px
-    );
-    pointer-events: none;
-    z-index: 999;
-  }
+  .stars { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+  .star { position:absolute; width:2px; height:2px; background:white; opacity:0; animation:twinkle var(--d) var(--delay) infinite; }
+  @keyframes twinkle { 0%,100%{opacity:0} 50%{opacity:var(--op)} }
 
-  /* ======= SCREENS ======= */
-  .screen { 
-    position: absolute; inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-  }
-  .screen.active { display: flex; }
+  .page-wrap { position:relative; z-index:1; width:90%; max-width:520px; display:flex; flex-direction:column; gap:26px; animation:slideUp 0.4s ease-out; }
+  @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
 
-  /* ======= CLOCK-IN SCREEN ======= */
-  #clockin-screen {
-    background: radial-gradient(ellipse at center, #0d0d2e 0%, #05050f 100%);
-    flex-direction: column;
-    gap: 0;
-  }
+  .logo-pixel { font-family:'Press Start 2P',monospace; font-size:24px; color:var(--green); text-shadow:0 0 20px rgba(15,255,80,0.5),4px 4px 0 rgba(15,255,80,0.12); animation:flicker 5s infinite; text-align:center; }
+  .logo-sub { font-size:17px; color:var(--dim); letter-spacing:4px; margin-top:6px; text-align:center; }
+  @keyframes flicker { 0%,94%,100%{opacity:1} 95%{opacity:0.3} 96%{opacity:1} 97%{opacity:0.4} 98%{opacity:1} }
 
-  .ci-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 28px;
-    max-width: 600px;
-    width: 90%;
-  }
+  .step-label { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--dim); text-align:center; letter-spacing:2px; }
+  .field-label { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--accent); margin-bottom:6px; display:block; }
 
-  .logo-area {
-    text-align: center;
-  }
+  .pixel-input { width:100%; background:#0a0a18; border:2px solid var(--border); color:var(--green); font-family:'VT323',monospace; font-size:20px; padding:10px 14px; outline:none; transition:border-color 0.2s; caret-color:var(--green); }
+  .pixel-input:focus { border-color:var(--green); box-shadow:0 0 10px rgba(15,255,80,0.12); }
+  .pixel-input::placeholder { color:#2a2a3a; }
 
-  .logo-pixel {
-    display: inline-block;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 28px;
-    color: var(--green);
-    text-shadow: 0 0 20px rgba(15,255,80,0.6), 4px 4px 0 rgba(15,255,80,0.2);
-    letter-spacing: 2px;
-    animation: flicker 4s infinite;
-  }
+  .mode-cards { display:flex; flex-direction:column; gap:12px; }
+  .mode-card { display:flex; align-items:center; gap:18px; padding:18px 20px; background:#0a0a18; border:2px solid var(--border); cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
+  .mode-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:transparent; transition:background 0.2s; }
+  .mode-card.solo:hover { border-color:var(--green); transform:translateX(4px); }
+  .mode-card.solo:hover::before { background:var(--green); }
+  .mode-card.create:hover { border-color:var(--yellow); transform:translateX(4px); }
+  .mode-card.create:hover::before { background:var(--yellow); }
+  .mode-card.join:hover { border-color:var(--purple); transform:translateX(4px); }
+  .mode-card.join:hover::before { background:var(--purple); }
+  .mode-icon { font-size:30px; flex-shrink:0; }
+  .mode-info { flex:1; }
+  .mode-title { font-family:'Press Start 2P',monospace; font-size:9px; margin-bottom:5px; }
+  .mode-card.solo .mode-title { color:var(--green); }
+  .mode-card.create .mode-title { color:var(--yellow); }
+  .mode-card.join .mode-title { color:var(--purple); }
+  .mode-desc { font-size:16px; color:var(--dim); line-height:1.4; }
+  .mode-arrow { font-family:'Press Start 2P',monospace; font-size:10px; color:var(--dim); flex-shrink:0; transition:transform 0.2s,color 0.2s; }
+  .mode-card:hover .mode-arrow { transform:translateX(4px); color:var(--text); }
 
-  .logo-sub {
-    font-size: 20px;
-    color: var(--dim);
-    margin-top: 8px;
-    letter-spacing: 4px;
-  }
+  .room-code-box { background:#0a0a18; border:2px solid var(--yellow); padding:28px 20px; text-align:center; }
+  .rc-label { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--dim); letter-spacing:2px; margin-bottom:14px; }
+  .rc-code { font-family:'Press Start 2P',monospace; font-size:36px; color:var(--yellow); letter-spacing:8px; text-shadow:0 0 20px rgba(255,215,0,0.4); margin-bottom:10px; display:block; }
+  .rc-sub { font-size:16px; color:var(--dim); }
 
-  @keyframes flicker {
-    0%,95%,100% { opacity: 1; }
-    96% { opacity: 0.4; }
-    97% { opacity: 1; }
-    98% { opacity: 0.3; }
-    99% { opacity: 1; }
-  }
+  .copy-btn { width:100%; padding:13px; background:rgba(255,215,0,0.08); border:2px solid var(--yellow); color:var(--yellow); font-family:'Press Start 2P',monospace; font-size:8px; cursor:pointer; transition:all 0.15s; letter-spacing:1px; }
+  .copy-btn:hover { background:rgba(255,215,0,0.15); }
+  .copy-btn.copied { border-color:var(--green); color:var(--green); background:rgba(15,255,80,0.08); }
 
-  .pixel-character-preview {
-    position: relative;
-    width: 80px;
-    height: 80px;
-  }
+  .waiting-bar { display:flex; align-items:center; gap:10px; padding:12px 16px; background:#0a0a18; border:2px solid var(--border); font-size:16px; color:var(--dim); }
+  .waiting-dot { width:8px; height:8px; border-radius:50%; background:var(--dim); animation:blink 1.2s infinite; flex-shrink:0; }
+  @keyframes blink { 0%,100%{opacity:0.3} 50%{opacity:1} }
 
-  .office-scene-mini {
-    width: 100%;
-    height: 120px;
-    position: relative;
-    border: 2px solid var(--border);
-    background: var(--floor);
-    overflow: hidden;
-    border-radius: 4px;
-  }
+  .join-input { font-family:'Press Start 2P',monospace !important; font-size:22px !important; text-transform:uppercase; letter-spacing:6px; text-align:center; }
 
-  .ci-form {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
+  .sess-opts { display:flex; gap:8px; }
+  .sess-btn { flex:1; padding:10px 4px; background:#0a0a18; border:2px solid var(--border); color:var(--dim); font-family:'Press Start 2P',monospace; font-size:6px; cursor:pointer; transition:all 0.15s; text-align:center; line-height:1.9; }
+  .sess-btn:hover, .sess-btn.sel { border-color:var(--blue); color:var(--blue); }
+  .sess-btn.sel { background:rgba(0,212,255,0.07); }
 
-  .field-label {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 8px;
-    color: var(--accent);
-    margin-bottom: 6px;
-    display: block;
-  }
+  .task-rows { display:flex; flex-direction:column; gap:8px; }
+  .task-row { display:flex; gap:8px; align-items:center; }
+  .task-num { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--yellow); width:18px; text-align:right; flex-shrink:0; }
 
-  .pixel-input {
-    width: 100%;
-    background: #0a0a18;
-    border: 2px solid var(--border);
-    color: var(--green);
-    font-family: 'VT323', monospace;
-    font-size: 20px;
-    padding: 10px 14px;
-    outline: none;
-    transition: border-color 0.2s;
-    caret-color: var(--green);
-  }
+  .main-btn { width:100%; padding:15px; background:var(--green); border:none; color:#000; font-family:'Press Start 2P',monospace; font-size:10px; cursor:pointer; letter-spacing:1px; transition:all 0.15s; position:relative; }
+  .main-btn::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:rgba(0,0,0,0.2); }
+  .main-btn:hover { background:#fff; box-shadow:0 0 20px rgba(15,255,80,0.35); transform:translateY(-2px); }
+  .main-btn:active { transform:translateY(0); }
+  .back-btn { background:transparent; border:none; color:var(--dim); font-family:'Press Start 2P',monospace; font-size:7px; cursor:pointer; transition:color 0.15s; text-align:center; padding:4px; letter-spacing:1px; }
+  .back-btn:hover { color:var(--text); }
 
-  .pixel-input:focus {
-    border-color: var(--green);
-    box-shadow: 0 0 12px rgba(15,255,80,0.2);
-  }
+  /* ===== WORKSPACE ===== */
+  #workspace-screen { flex-direction:column; background:var(--bg); }
+  .topbar { width:100%; height:46px; background:var(--panel); border-bottom:2px solid var(--border); display:flex; align-items:center; padding:0 14px; gap:14px; flex-shrink:0; z-index:10; }
+  .topbar-logo { font-family:'Press Start 2P',monospace; font-size:8px; color:var(--green); }
+  .topbar-div { width:2px; height:22px; background:var(--border); }
+  .topbar-status { display:flex; align-items:center; gap:7px; font-size:15px; }
+  .status-dot { width:9px; height:9px; border-radius:50%; background:var(--green); box-shadow:0 0 7px var(--green); animation:pulse 2s infinite; }
+  .status-dot.brk { background:var(--yellow); box-shadow:0 0 7px var(--yellow); }
+  .status-dot.idle { background:var(--dim); box-shadow:none; animation:none; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+  .topbar-clock { margin-left:auto; font-family:'Press Start 2P',monospace; font-size:9px; color:var(--yellow); }
+  .topbar-user { font-size:15px; color:var(--blue); }
+  .room-badge { font-family:'Press Start 2P',monospace; font-size:7px; background:rgba(255,215,0,0.1); border:1px solid var(--yellow); color:var(--yellow); padding:3px 8px; }
 
-  .pixel-input::placeholder { color: #333; }
-
-  .task-list-input {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .task-input-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-
-  .task-input-row .pixel-input {
-    flex: 1;
-  }
-
-  .task-num {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 8px;
-    color: var(--yellow);
-    width: 20px;
-    text-align: right;
-  }
-
-  .session-options {
-    display: flex;
-    gap: 10px;
-  }
-
-  .session-btn {
-    flex: 1;
-    padding: 10px 8px;
-    background: #0a0a18;
-    border: 2px solid var(--border);
-    color: var(--dim);
-    font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-align: center;
-  }
-
-  .session-btn:hover, .session-btn.selected {
-    border-color: var(--blue);
-    color: var(--blue);
-    box-shadow: 0 0 10px rgba(0,212,255,0.2);
-  }
-
-  .session-btn.selected {
-    background: rgba(0,212,255,0.08);
-  }
-
-  .clock-in-btn {
-    width: 100%;
-    padding: 16px;
-    background: var(--green);
-    border: none;
-    color: #000;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 11px;
-    cursor: pointer;
-    letter-spacing: 2px;
-    transition: all 0.15s;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .clock-in-btn::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 4px;
-    background: rgba(0,0,0,0.3);
-  }
-
-  .clock-in-btn:hover {
-    background: #fff;
-    box-shadow: 0 0 24px rgba(15,255,80,0.5);
-    transform: translateY(-2px);
-  }
-
-  .clock-in-btn:active { transform: translateY(0); }
-
-  /* ======= MAIN WORKSPACE ======= */
-  #workspace-screen {
-    flex-direction: column;
-    background: var(--bg);
-    gap: 0;
-  }
-
-  /* TOP BAR */
-  .topbar {
-    width: 100%;
-    height: 48px;
-    background: var(--panel);
-    border-bottom: 2px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 16px;
-    gap: 20px;
-    flex-shrink: 0;
-    z-index: 10;
-  }
-
-  .topbar-logo {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 9px;
-    color: var(--green);
-    letter-spacing: 1px;
-  }
-
-  .topbar-divider {
-    width: 2px; height: 24px;
-    background: var(--border);
-  }
-
-  .topbar-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-  }
-
-  .status-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: var(--green);
-    box-shadow: 0 0 8px var(--green);
-    animation: pulse 2s infinite;
-  }
-
-  .status-dot.break { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
-  .status-dot.idle { background: var(--dim); box-shadow: none; animation: none; }
-
-  @keyframes pulse {
-    0%,100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(0.85); }
-  }
-
-  .topbar-time {
-    margin-left: auto;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 10px;
-    color: var(--yellow);
-  }
-
-  .topbar-user {
-    font-size: 16px;
-    color: var(--blue);
-  }
-
-  /* MAIN LAYOUT */
-  .workspace-body {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
-    min-height: 0;
-  }
+  .workspace-body { flex:1; display:flex; overflow:hidden; min-height:0; }
 
   /* LEFT PANEL */
-  .left-panel {
-    width: 220px;
-    flex-shrink: 0;
-    background: var(--panel);
-    border-right: 2px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    padding: 16px;
-    gap: 20px;
-    overflow-y: auto;
-  }
+  .left-panel { width:210px; flex-shrink:0; background:var(--panel); border-right:2px solid var(--border); display:flex; flex-direction:column; padding:14px; gap:18px; overflow-y:auto; }
+  .panel-title { font-family:'Press Start 2P',monospace; font-size:6px; color:var(--accent); letter-spacing:1px; margin-bottom:8px; }
 
-  .panel-title {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
-    color: var(--accent);
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-  }
-
-  /* TIMER */
-  .timer-display {
-    text-align: center;
-  }
-
-  .timer-ring {
-    position: relative;
-    width: 120px;
-    height: 120px;
-    margin: 0 auto 12px;
-  }
-
-  .timer-ring svg {
-    transform: rotate(-90deg);
-  }
-
-  .timer-ring-bg {
-    fill: none;
-    stroke: var(--border);
-    stroke-width: 6;
-  }
-
-  .timer-ring-progress {
-    fill: none;
-    stroke: var(--green);
-    stroke-width: 6;
-    stroke-linecap: square;
-    stroke-dasharray: 283;
-    stroke-dashoffset: 0;
-    transition: stroke-dashoffset 1s linear, stroke 0.3s;
-    filter: drop-shadow(0 0 4px var(--green));
-  }
-
-  .timer-ring-progress.break-mode {
-    stroke: var(--yellow);
-    filter: drop-shadow(0 0 4px var(--yellow));
-  }
-
-  .timer-text {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .timer-digits {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 18px;
-    color: var(--text);
-    line-height: 1;
-  }
-
-  .timer-label {
-    font-size: 12px;
-    color: var(--dim);
-    margin-top: 4px;
-  }
-
-  .timer-controls {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 8px;
-  }
-
-  .t-btn {
-    padding: 6px 10px;
-    background: #0a0a18;
-    border: 2px solid var(--border);
-    color: var(--text);
-    font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .t-btn:hover { border-color: var(--green); color: var(--green); }
-  .t-btn.active { border-color: var(--green); color: var(--green); background: rgba(15,255,80,0.08); }
+  .timer-ring { position:relative; width:110px; height:110px; margin:0 auto 10px; }
+  .timer-ring svg { transform:rotate(-90deg); }
+  .ring-bg { fill:none; stroke:var(--border); stroke-width:6; }
+  .ring-prog { fill:none; stroke:var(--green); stroke-width:6; stroke-linecap:square; stroke-dasharray:283; stroke-dashoffset:0; transition:stroke-dashoffset 1s linear,stroke 0.3s; filter:drop-shadow(0 0 4px var(--green)); }
+  .ring-prog.brk { stroke:var(--yellow); filter:drop-shadow(0 0 4px var(--yellow)); }
+  .timer-text { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .timer-digits { font-family:'Press Start 2P',monospace; font-size:16px; color:var(--text); }
+  .timer-lbl { font-size:11px; color:var(--dim); margin-top:3px; }
+  .t-ctrl { display:flex; gap:6px; justify-content:center; margin-top:6px; }
+  .t-btn { padding:5px 8px; background:#0a0a18; border:2px solid var(--border); color:var(--text); font-family:'Press Start 2P',monospace; font-size:6px; cursor:pointer; transition:all 0.15s; }
+  .t-btn:hover, .t-btn.act { border-color:var(--green); color:var(--green); }
+  .t-btn.act { background:rgba(15,255,80,0.07); }
 
   /* TASKS */
-  .tasks-section { flex: 1; }
+  .tasks-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .task-counter { font-family:'Press Start 2P',monospace; font-size:6px; color:var(--dim); }
+  .task-counter.full { color:var(--accent); }
 
-  .task-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    font-size: 16px;
-    line-height: 1.3;
-    transition: color 0.2s;
+  .task-item { display:flex; align-items:flex-start; gap:7px; padding:7px 0; border-bottom:1px solid var(--border); cursor:pointer; font-size:15px; transition:color 0.2s; }
+  .task-item:hover { color:var(--blue); }
+  .task-cb { width:11px; height:11px; border:2px solid var(--dim); flex-shrink:0; margin-top:3px; }
+  .task-item.done .task-cb { background:var(--green); border-color:var(--green); }
+  .task-item.done .task-tx { text-decoration:line-through; color:var(--dim); }
+
+  .add-task-row { display:flex; gap:6px; margin-top:8px; }
+  .add-task-input { flex:1; background:#0a0a18; border:2px solid var(--border); color:var(--green); font-family:'VT323',monospace; font-size:16px; padding:6px 8px; outline:none; caret-color:var(--green); transition:border-color 0.2s; }
+  .add-task-input:focus { border-color:var(--green); }
+  .add-task-input::placeholder { color:#2a2a3a; }
+  .add-task-input:disabled { opacity:0.3; cursor:not-allowed; }
+  .add-task-btn { padding:6px 8px; background:#0a0a18; border:2px solid var(--border); color:var(--green); font-family:'Press Start 2P',monospace; font-size:8px; cursor:pointer; transition:all 0.15s; flex-shrink:0; }
+  .add-task-btn:hover { border-color:var(--green); background:rgba(15,255,80,0.07); }
+  .add-task-btn:disabled { opacity:0.3; cursor:not-allowed; }
+
+  .pomo-dots { display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
+  .pdot { width:13px; height:13px; background:var(--border); border:2px solid var(--border); }
+  .pdot.done { background:var(--accent); border-color:var(--accent); box-shadow:0 0 5px var(--accent); }
+
+  /* OFFICE + CHAT WRAPPER */
+  .office-chat-wrap { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+
+  .office-area { flex:1; position:relative; overflow:hidden; background:#1a1a2e; min-height:0; }
+  canvas#office { display:block; image-rendering:pixelated; }
+
+  .float-msg { position:absolute; background:var(--panel); border:2px solid var(--border); padding:5px 10px; font-size:15px; pointer-events:none; white-space:nowrap; animation:floatUp 2.5s ease-out forwards; z-index:50; }
+  @keyframes floatUp { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-36px)} }
+
+  /* CHAT */
+  .chat-bar {
+    flex-shrink:0;
+    background:var(--panel);
+    border-top:2px solid var(--border);
   }
 
-  .task-item:hover { color: var(--blue); }
-
-  .task-checkbox {
-    width: 12px; height: 12px;
-    border: 2px solid var(--dim);
-    flex-shrink: 0;
-    margin-top: 3px;
-    transition: all 0.2s;
-    position: relative;
+  .chat-toggle {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 14px;
+    cursor:pointer;
+    transition:background 0.15s;
+    user-select:none;
   }
+  .chat-toggle:hover { background:rgba(255,255,255,0.03); }
+  .chat-toggle-label { font-family:'Press Start 2P',monospace; font-size:6px; color:var(--dim); letter-spacing:1px; }
+  .chat-unread { font-family:'Press Start 2P',monospace; font-size:6px; background:var(--accent); color:#fff; padding:2px 6px; border-radius:0; display:none; }
+  .chat-unread.show { display:inline; }
+  .chat-chevron { margin-left:auto; font-size:10px; color:var(--dim); transition:transform 0.2s; }
+  .chat-bar.open .chat-chevron { transform:rotate(180deg); }
+  .chat-bar.open .chat-toggle-label { color:var(--blue); }
 
-  .task-item.done .task-checkbox {
-    background: var(--green);
-    border-color: var(--green);
+  .chat-body {
+    display:none;
+    flex-direction:column;
+    height:160px;
+    border-top:1px solid var(--border);
   }
+  .chat-bar.open .chat-body { display:flex; }
 
-  .task-item.done .task-checkbox::after {
-    content: '';
-    position: absolute;
-    inset: 1px;
-    background: var(--green);
+  .chat-messages {
+    flex:1; overflow-y:auto;
+    padding:8px 14px;
+    display:flex; flex-direction:column; gap:4px;
+    min-height:0;
   }
+  .chat-msg { font-size:15px; line-height:1.4; }
+  .chat-msg .msg-name { font-family:'Press Start 2P',monospace; font-size:7px; margin-right:6px; }
+  .chat-msg .msg-time { font-size:12px; color:var(--dim); margin-left:6px; }
+  .chat-msg .msg-text { color:var(--text); }
+  .chat-empty { font-size:14px; color:var(--dim); text-align:center; padding:20px 0; font-family:'Press Start 2P',monospace; font-size:7px; line-height:2; }
 
-  .task-item.done .task-text {
-    text-decoration: line-through;
-    color: var(--dim);
-  }
-
-  /* SESSIONS COUNTER */
-  .sessions-section { }
-
-  .pomodoro-dots {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-top: 8px;
-  }
-
-  .pomo-dot {
-    width: 14px; height: 14px;
-    background: var(--border);
-    border: 2px solid var(--border);
-  }
-
-  .pomo-dot.done {
-    background: var(--accent);
-    border-color: var(--accent);
-    box-shadow: 0 0 6px var(--accent);
-  }
-
-  /* OFFICE CANVAS */
-  .office-area {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    background: var(--floor);
-  }
-
-  canvas#office {
-    display: block;
-    image-rendering: pixelated;
-  }
-
-  /* FLOATING CHAT */
-  .float-msg {
-    position: absolute;
-    background: var(--panel);
-    border: 2px solid var(--border);
-    padding: 6px 12px;
-    font-size: 16px;
-    color: var(--text);
-    pointer-events: none;
-    white-space: nowrap;
-    animation: floatUp 3s ease-out forwards;
-    z-index: 50;
-  }
-
-  @keyframes floatUp {
-    0% { opacity: 1; transform: translateY(0); }
-    100% { opacity: 0; transform: translateY(-40px); }
-  }
+  .chat-input-row { display:flex; gap:0; border-top:1px solid var(--border); flex-shrink:0; }
+  .chat-input { flex:1; background:#0a0a18; border:none; color:var(--green); font-family:'VT323',monospace; font-size:18px; padding:8px 12px; outline:none; caret-color:var(--green); }
+  .chat-input::placeholder { color:#2a2a3a; }
+  .chat-send { padding:8px 14px; background:#0a0a18; border:none; border-left:2px solid var(--border); color:var(--blue); font-family:'Press Start 2P',monospace; font-size:7px; cursor:pointer; transition:all 0.15s; flex-shrink:0; }
+  .chat-send:hover { background:rgba(0,212,255,0.08); }
 
   /* RIGHT PANEL */
-  .right-panel {
-    width: 200px;
-    flex-shrink: 0;
-    background: var(--panel);
-    border-left: 2px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    padding: 16px;
-    gap: 16px;
-  }
+  .right-panel { width:190px; flex-shrink:0; background:var(--panel); border-left:2px solid var(--border); display:flex; flex-direction:column; padding:14px; gap:14px; overflow-y:auto; }
+  .online-user { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); font-size:15px; }
+  .user-av { width:26px; height:26px; flex-shrink:0; image-rendering:pixelated; }
+  .user-info { flex:1; min-width:0; }
+  .user-nm { color:var(--text); line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .user-st { font-size:13px; color:var(--dim); }
+  .udot { width:7px; height:7px; border-radius:50%; background:var(--green); flex-shrink:0; }
+  .udot.brk { background:var(--yellow); }
+  .udot.idle { background:var(--dim); }
 
-  .online-user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 16px;
-  }
+  .invite-divider { border:none; border-top:1px solid var(--border); margin:4px 0; }
+  .invite-solo-btn { width:100%; padding:10px 8px; background:rgba(0,212,255,0.06); border:2px solid var(--blue); color:var(--blue); font-family:'Press Start 2P',monospace; font-size:6px; cursor:pointer; transition:all 0.2s; letter-spacing:1px; text-align:center; }
+  .invite-solo-btn:hover { background:rgba(0,212,255,0.12); }
+  .invite-generated { display:flex; flex-direction:column; gap:6px; animation:fadeIn 0.3s ease-out; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+  .invite-code-mini { background:#0a0a18; border:2px solid var(--yellow); padding:10px; text-align:center; }
+  .invite-code-mini .lbl { font-family:'Press Start 2P',monospace; font-size:6px; color:var(--dim); margin-bottom:5px; }
+  .invite-code-mini .code { font-family:'Press Start 2P',monospace; font-size:16px; color:var(--yellow); letter-spacing:4px; }
+  .invite-box { background:#0a0a18; border:2px solid var(--border); padding:10px; text-align:center; margin-bottom:8px; }
+  .invite-code-sm { font-family:'Press Start 2P',monospace; font-size:14px; color:var(--yellow); letter-spacing:3px; }
+  .invite-lbl { font-size:12px; color:var(--dim); margin-bottom:4px; }
 
-  .user-avatar {
-    width: 28px; height: 28px;
-    flex-shrink: 0;
-    image-rendering: pixelated;
-  }
+  .statusbar { width:100%; height:30px; background:var(--panel); border-top:2px solid var(--border); display:flex; align-items:center; padding:0 14px; gap:16px; flex-shrink:0; font-size:13px; color:var(--dim); }
+  .sb-g { color:var(--green); }
+  .co-btn { margin-left:auto; padding:3px 10px; background:transparent; border:2px solid var(--accent); color:var(--accent); font-family:'Press Start 2P',monospace; font-size:5px; cursor:pointer; transition:all 0.15s; }
+  .co-btn:hover { background:var(--accent); color:#000; }
 
-  .user-info { flex: 1; }
-  .user-name { color: var(--text); line-height: 1; }
-  .user-status { font-size: 14px; color: var(--dim); }
+  /* CLOCK OUT */
+  #clockout-screen { background:radial-gradient(ellipse at center,#0d1a0d 0%,#05050f 100%); }
+  .summary-card { background:var(--panel); border:2px solid var(--border); padding:26px; width:90%; max-width:440px; display:flex; flex-direction:column; gap:16px; }
+  .sum-title { font-family:'Press Start 2P',monospace; font-size:10px; color:var(--green); text-align:center; }
+  .score-num { font-family:'Press Start 2P',monospace; font-size:34px; color:var(--green); display:block; text-align:center; text-shadow:0 0 18px rgba(15,255,80,0.4); }
+  .score-lbl { color:var(--dim); font-size:15px; text-align:center; }
+  .sum-stat { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:17px; }
+  .sum-stat .lbl { color:var(--dim); }
+  .sum-stat .val { color:var(--yellow); font-family:'Press Start 2P',monospace; font-size:9px; }
+  .task-sum-item { display:flex; align-items:center; gap:7px; font-size:15px; padding:3px 0; }
 
-  .user-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--green);
-  }
+  .notif { position:fixed; bottom:40px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--panel); border:2px solid var(--yellow); color:var(--yellow); font-family:'Press Start 2P',monospace; font-size:7px; padding:9px 18px; z-index:200; transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); letter-spacing:1px; white-space:nowrap; }
+  .notif.show { transform:translateX(-50%) translateY(0); }
 
-  .user-dot.busy { background: var(--accent); }
-  .user-dot.break { background: var(--yellow); }
-
-  /* BOTTOM STATUS BAR */
-  .statusbar {
-    width: 100%;
-    height: 32px;
-    background: var(--panel);
-    border-top: 2px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 16px;
-    gap: 20px;
-    flex-shrink: 0;
-    font-size: 14px;
-    color: var(--dim);
-  }
-
-  .statusbar span { display: flex; align-items: center; gap: 6px; }
-  .statusbar .sb-accent { color: var(--green); }
-
-  .clock-out-btn {
-    margin-left: auto;
-    padding: 4px 12px;
-    background: transparent;
-    border: 2px solid var(--accent);
-    color: var(--accent);
-    font-family: 'Press Start 2P', monospace;
-    font-size: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-    letter-spacing: 1px;
-  }
-
-  .clock-out-btn:hover {
-    background: var(--accent);
-    color: #000;
-  }
-
-  /* ======= CLOCK-OUT SCREEN ======= */
-  #clockout-screen {
-    background: radial-gradient(ellipse at center, #0d1a0d 0%, #05050f 100%);
-    flex-direction: column;
-    gap: 24px;
-  }
-
-  .summary-card {
-    background: var(--panel);
-    border: 2px solid var(--border);
-    padding: 28px;
-    width: 90%;
-    max-width: 480px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .summary-title {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 12px;
-    color: var(--green);
-    text-align: center;
-  }
-
-  .summary-stat {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 18px;
-  }
-
-  .summary-stat .label { color: var(--dim); }
-  .summary-stat .value { color: var(--yellow); font-family: 'Press Start 2P', monospace; font-size: 10px; }
-
-  .task-summary { display: flex; flex-direction: column; gap: 6px; }
-
-  .task-summary-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-  }
-
-  .check-icon { color: var(--green); }
-  .cross-icon { color: var(--dim); }
-
-  .focus-score {
-    text-align: center;
-    padding: 16px 0;
-  }
-
-  .score-num {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 36px;
-    color: var(--green);
-    display: block;
-    text-shadow: 0 0 20px rgba(15,255,80,0.5);
-  }
-
-  .score-label { color: var(--dim); font-size: 16px; }
-
-  .new-session-btn {
-    width: 100%;
-    padding: 14px;
-    background: transparent;
-    border: 2px solid var(--green);
-    color: var(--green);
-    font-family: 'Press Start 2P', monospace;
-    font-size: 9px;
-    cursor: pointer;
-    letter-spacing: 1px;
-    transition: all 0.15s;
-  }
-
-  .new-session-btn:hover {
-    background: var(--green);
-    color: #000;
-    box-shadow: 0 0 20px rgba(15,255,80,0.3);
-  }
-
-  /* PIXEL ART ELEMENTS via CSS */
-  .pixel-desk {
-    image-rendering: pixelated;
-  }
-
-  /* NOTIFICATION */
-  .notif {
-    position: fixed;
-    bottom: 48px;
-    left: 50%;
-    transform: translateX(-50%) translateY(80px);
-    background: var(--panel);
-    border: 2px solid var(--yellow);
-    color: var(--yellow);
-    font-family: 'Press Start 2P', monospace;
-    font-size: 8px;
-    padding: 10px 20px;
-    z-index: 100;
-    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    letter-spacing: 1px;
-    white-space: nowrap;
-  }
-
-  .notif.show { transform: translateX(-50%) translateY(0); }
-
-  /* INTRO ANIMATION */
-  .ci-container { animation: slideUp 0.5s ease-out; }
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  /* STARS BG */
-  .stars {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    overflow: hidden;
-  }
-
-  .star {
-    position: absolute;
-    width: 2px; height: 2px;
-    background: white;
-    opacity: 0;
-    animation: twinkle var(--d) var(--delay) infinite;
-  }
-
-  @keyframes twinkle {
-    0%,100% { opacity: 0; }
-    50% { opacity: var(--op); }
-  }
-
-  .ci-container { position: relative; z-index: 1; }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); }
+  ::-webkit-scrollbar { width:3px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); }
 </style>
 </head>
 <body>
 
-<!-- CLOCK IN SCREEN -->
-<div id="clockin-screen" class="screen active">
-  <div class="stars" id="stars"></div>
-  <div class="ci-container">
-    <div class="logo-area">
-      <div class="logo-pixel">PIXELDESK</div>
-      <div class="logo-sub">YOUR VIRTUAL WORKSPACE</div>
-    </div>
+<div class="stars" id="stars"></div>
 
-    <div class="ci-form">
-      <div>
-        <span class="field-label">► YOUR NAME</span>
-        <input class="pixel-input" id="username-input" placeholder="enter your name..." maxlength="20" autocomplete="off">
+<!-- SCREEN 1: PICK MODE -->
+<div id="screen-mode" class="screen active" style="background:radial-gradient(ellipse at center,#0d0d2e 0%,#05050f 100%)">
+  <div class="page-wrap">
+    <div><div class="logo-pixel">PIXELDESK</div><div class="logo-sub">VIRTUAL COWORKING SPACE</div></div>
+    <div class="step-label">CHOOSE YOUR MODE</div>
+    <div class="mode-cards">
+      <div class="mode-card solo" onclick="pickMode('solo')">
+        <div class="mode-icon">🧑‍💻</div>
+        <div class="mode-info"><div class="mode-title">SOLO FOCUS</div><div class="mode-desc">Just you, your tasks, and a timer. Head down, get it done.</div></div>
+        <div class="mode-arrow">►</div>
       </div>
-
-      <div>
-        <span class="field-label">► TODAY'S TASKS (UP TO 3)</span>
-        <div class="task-list-input">
-          <div class="task-input-row">
-            <span class="task-num">01</span>
-            <input class="pixel-input" id="task1" placeholder="what are you working on?" autocomplete="off">
-          </div>
-          <div class="task-input-row">
-            <span class="task-num">02</span>
-            <input class="pixel-input" id="task2" placeholder="optional..." autocomplete="off">
-          </div>
-          <div class="task-input-row">
-            <span class="task-num">03</span>
-            <input class="pixel-input" id="task3" placeholder="optional..." autocomplete="off">
-          </div>
-        </div>
+      <div class="mode-card create" onclick="pickMode('create')">
+        <div class="mode-icon">🏠</div>
+        <div class="mode-info"><div class="mode-title">CREATE A ROOM</div><div class="mode-desc">Start a coworking session. Get a code, invite your crew.</div></div>
+        <div class="mode-arrow">►</div>
       </div>
-
-      <div>
-        <span class="field-label">► SESSION TYPE</span>
-        <div class="session-options">
-          <button class="session-btn selected" data-mins="25" onclick="selectSession(this, 25)">
-            POMODORO<br><span style="color:var(--green);margin-top:4px;display:block">25 MIN</span>
-          </button>
-          <button class="session-btn" data-mins="50" onclick="selectSession(this, 50)">
-            DEEP WORK<br><span style="color:var(--green);margin-top:4px;display:block">50 MIN</span>
-          </button>
-          <button class="session-btn" data-mins="90" onclick="selectSession(this, 90)">
-            FLOW STATE<br><span style="color:var(--green);margin-top:4px;display:block">90 MIN</span>
-          </button>
-        </div>
+      <div class="mode-card join" onclick="pickMode('join')">
+        <div class="mode-icon">🚪</div>
+        <div class="mode-info"><div class="mode-title">JOIN A ROOM</div><div class="mode-desc">Got a room code? Jump in and work alongside your people.</div></div>
+        <div class="mode-arrow">►</div>
       </div>
-
-      <button class="clock-in-btn" onclick="clockIn()">► CLOCK IN ◄</button>
     </div>
   </div>
 </div>
 
-<!-- WORKSPACE SCREEN -->
-<div id="workspace-screen" class="screen">
+<!-- SCREEN 2a: SOLO SETUP -->
+<div id="screen-solo" class="screen" style="background:radial-gradient(ellipse at center,#0d0d2e 0%,#05050f 100%)">
+  <div class="page-wrap">
+    <div><div class="logo-pixel">PIXELDESK</div></div>
+    <div class="step-label">STEP 2 OF 2 &nbsp;·&nbsp; YOUR SESSION</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div><span class="field-label">► YOUR NAME</span><input class="pixel-input" id="solo-name" placeholder="enter your name..." maxlength="12" autocomplete="off"></div>
+      <div>
+        <span class="field-label">► TODAY'S QUESTS</span>
+        <div class="task-rows">
+          <div class="task-row"><span class="task-num">01</span><input class="pixel-input" id="solo-t1" placeholder="what are you working on?" autocomplete="off"></div>
+          <div class="task-row"><span class="task-num">02</span><input class="pixel-input" id="solo-t2" placeholder="optional..." autocomplete="off"></div>
+          <div class="task-row"><span class="task-num">03</span><input class="pixel-input" id="solo-t3" placeholder="optional..." autocomplete="off"></div>
+        </div>
+      </div>
+      <div>
+        <span class="field-label">► SESSION TYPE</span>
+        <div class="sess-opts">
+          <button class="sess-btn sel" onclick="selSess(this,25)">POMODORO<br><span style="color:var(--green)">25 MIN</span></button>
+          <button class="sess-btn" onclick="selSess(this,50)">DEEP WORK<br><span style="color:var(--green)">50 MIN</span></button>
+          <button class="sess-btn" onclick="selSess(this,90)">FLOW STATE<br><span style="color:var(--green)">90 MIN</span></button>
+        </div>
+      </div>
+    </div>
+    <button class="main-btn" onclick="startSolo()">► CLOCK IN ◄</button>
+    <button class="back-btn" onclick="goTo('screen-mode')">◄ BACK</button>
+  </div>
+</div>
 
+<!-- SCREEN 2b: CREATE CODE -->
+<div id="screen-create-code" class="screen" style="background:radial-gradient(ellipse at center,#1a1400 0%,#05050f 100%)">
+  <div class="page-wrap">
+    <div><div class="logo-pixel">PIXELDESK</div></div>
+    <div class="step-label">STEP 2 OF 3 &nbsp;·&nbsp; SHARE YOUR ROOM</div>
+    <div class="room-code-box">
+      <div class="rc-label">YOUR ROOM CODE</div>
+      <span class="rc-code" id="room-code-val">------</span>
+      <div class="rc-sub">Share this with your crew before joining</div>
+    </div>
+    <button class="copy-btn" id="copy-btn" onclick="copyLink()">📋 COPY INVITE LINK</button>
+    <div class="waiting-bar"><div class="waiting-dot"></div><span>Share the link, then set up your session</span></div>
+    <button class="main-btn" style="background:var(--yellow);color:#000" onclick="goTo('screen-create-setup')">► I'VE SHARED IT — SET UP MY SESSION ◄</button>
+    <button class="back-btn" onclick="goTo('screen-mode')">◄ BACK</button>
+  </div>
+</div>
+
+<!-- SCREEN 3a: CREATE SETUP -->
+<div id="screen-create-setup" class="screen" style="background:radial-gradient(ellipse at center,#0d0d2e 0%,#05050f 100%)">
+  <div class="page-wrap">
+    <div><div class="logo-pixel">PIXELDESK</div></div>
+    <div class="step-label">STEP 3 OF 3 &nbsp;·&nbsp; YOUR SESSION</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div><span class="field-label">► YOUR NAME</span><input class="pixel-input" id="create-name" placeholder="enter your name..." maxlength="12" autocomplete="off"></div>
+      <div>
+        <span class="field-label">► TODAY'S QUESTS</span>
+        <div class="task-rows">
+          <div class="task-row"><span class="task-num">01</span><input class="pixel-input" id="create-t1" placeholder="what are you working on?" autocomplete="off"></div>
+          <div class="task-row"><span class="task-num">02</span><input class="pixel-input" id="create-t2" placeholder="optional..." autocomplete="off"></div>
+          <div class="task-row"><span class="task-num">03</span><input class="pixel-input" id="create-t3" placeholder="optional..." autocomplete="off"></div>
+        </div>
+      </div>
+      <div>
+        <span class="field-label">► SESSION TYPE</span>
+        <div class="sess-opts">
+          <button class="sess-btn sel" onclick="selSess(this,25)">POMODORO<br><span style="color:var(--green)">25 MIN</span></button>
+          <button class="sess-btn" onclick="selSess(this,50)">DEEP WORK<br><span style="color:var(--green)">50 MIN</span></button>
+          <button class="sess-btn" onclick="selSess(this,90)">FLOW STATE<br><span style="color:var(--green)">90 MIN</span></button>
+        </div>
+      </div>
+    </div>
+    <button class="main-btn" onclick="startCreate()">► OPEN THE ROOM ◄</button>
+    <button class="back-btn" onclick="goTo('screen-create-code')">◄ BACK</button>
+  </div>
+</div>
+
+<!-- SCREEN 2c: JOIN CODE -->
+<div id="screen-join" class="screen" style="background:radial-gradient(ellipse at center,#0d002e 0%,#05050f 100%)">
+  <div class="page-wrap">
+    <div><div class="logo-pixel">PIXELDESK</div></div>
+    <div class="step-label">STEP 2 OF 3 &nbsp;·&nbsp; ENTER ROOM CODE</div>
+    <div><span class="field-label">► ROOM CODE</span><input class="pixel-input join-input" id="join-code" placeholder="······" maxlength="6" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div>
+    <button class="main-btn" style="background:var(--purple);color:#fff" onclick="goToJoinSetup()">► FIND ROOM ◄</button>
+    <button class="back-btn" onclick="goTo('screen-mode')">◄ BACK</button>
+  </div>
+</div>
+
+<!-- SCREEN 3b: JOIN SETUP -->
+<div id="screen-join-setup" class="screen" style="background:radial-gradient(ellipse at center,#0d002e 0%,#05050f 100%)">
+  <div class="page-wrap">
+    <div><div class="logo-pixel">PIXELDESK</div></div>
+    <div class="step-label">STEP 3 OF 3 &nbsp;·&nbsp; YOUR SESSION</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div><span class="field-label">► YOUR NAME</span><input class="pixel-input" id="join-name" placeholder="enter your name..." maxlength="12" autocomplete="off"></div>
+      <div>
+        <span class="field-label">► TODAY'S QUESTS</span>
+        <div class="task-rows">
+          <div class="task-row"><span class="task-num">01</span><input class="pixel-input" id="join-t1" placeholder="what are you working on?" autocomplete="off"></div>
+          <div class="task-row"><span class="task-num">02</span><input class="pixel-input" id="join-t2" placeholder="optional..." autocomplete="off"></div>
+        </div>
+      </div>
+    </div>
+    <button class="main-btn" style="background:var(--purple);color:#fff" onclick="startJoin()">► JOIN THE ROOM ◄</button>
+    <button class="back-btn" onclick="goTo('screen-join')">◄ BACK</button>
+  </div>
+</div>
+
+<!-- WORKSPACE -->
+<div id="workspace-screen" class="screen">
   <div class="topbar">
     <span class="topbar-logo">PIXELDESK</span>
-    <div class="topbar-divider"></div>
-    <div class="topbar-status">
-      <div class="status-dot" id="status-dot"></div>
-      <span id="status-text">DEEP FOCUS</span>
-    </div>
-    <div class="topbar-divider"></div>
-    <span class="topbar-user" id="topbar-user">ANON</span>
-    <span class="topbar-time" id="topbar-clock">00:00</span>
+    <div class="topbar-div"></div>
+    <div class="topbar-status"><div class="status-dot" id="status-dot"></div><span id="status-text">DEEP FOCUS</span></div>
+    <div class="topbar-div"></div>
+    <span class="topbar-user" id="topbar-user">—</span>
+    <span class="room-badge" id="room-badge" style="display:none"></span>
+    <span class="topbar-clock" id="topbar-clock">00:00</span>
   </div>
 
   <div class="workspace-body">
-
-    <!-- LEFT: TIMER + TASKS -->
+    <!-- LEFT -->
     <div class="left-panel">
-
-      <div class="timer-display">
+      <div>
         <div class="panel-title">► FOCUS TIMER</div>
         <div class="timer-ring">
-          <svg width="120" height="120" viewBox="0 0 100 100">
-            <circle class="timer-ring-bg" cx="50" cy="50" r="45"/>
-            <circle class="timer-ring-progress" id="ring-progress" cx="50" cy="50" r="45"/>
+          <svg width="110" height="110" viewBox="0 0 100 100">
+            <circle class="ring-bg" cx="50" cy="50" r="45"/>
+            <circle class="ring-prog" id="ring-prog" cx="50" cy="50" r="45"/>
           </svg>
           <div class="timer-text">
             <span class="timer-digits" id="timer-digits">25:00</span>
-            <span class="timer-label" id="timer-mode-label">FOCUS</span>
+            <span class="timer-lbl" id="timer-lbl">FOCUS</span>
           </div>
         </div>
-        <div class="timer-controls">
+        <div class="t-ctrl">
           <button class="t-btn" id="btn-start" onclick="toggleTimer()">START</button>
           <button class="t-btn" onclick="resetTimer()">RESET</button>
         </div>
-        <div style="margin-top:10px;">
-          <button class="t-btn" onclick="startBreak()" style="width:100%;font-size:6px;">TAKE BREAK (5 MIN)</button>
-        </div>
+        <div style="margin-top:8px"><button class="t-btn" onclick="startBreak()" style="width:100%;font-size:5px">TAKE BREAK (5 MIN)</button></div>
       </div>
 
-      <div class="tasks-section">
-        <div class="panel-title">► TODAY'S QUESTS</div>
+      <div>
+        <div class="tasks-header">
+          <div class="panel-title" style="margin-bottom:0">► TODAY'S QUESTS</div>
+          <span class="task-counter" id="task-counter">0/10</span>
+        </div>
         <div id="task-list"></div>
-      </div>
-
-      <div class="sessions-section">
-        <div class="panel-title">► SESSIONS</div>
-        <div class="pomodoro-dots" id="pomo-dots">
-          <div class="pomo-dot"></div>
-          <div class="pomo-dot"></div>
-          <div class="pomo-dot"></div>
-          <div class="pomo-dot"></div>
-          <div class="pomo-dot"></div>
-          <div class="pomo-dot"></div>
-          <div class="pomo-dot"></div>
-          <div class="pomo-dot"></div>
+        <div class="add-task-row">
+          <input class="add-task-input" id="add-task-input" placeholder="+ new quest..." autocomplete="off" onkeydown="if(event.key==='Enter')addTask()">
+          <button class="add-task-btn" id="add-task-btn" onclick="addTask()">+</button>
         </div>
       </div>
 
+      <div>
+        <div class="panel-title">► SESSIONS</div>
+        <div class="pomo-dots" id="pomo-dots">
+          <div class="pdot"></div><div class="pdot"></div><div class="pdot"></div><div class="pdot"></div>
+          <div class="pdot"></div><div class="pdot"></div><div class="pdot"></div><div class="pdot"></div>
+        </div>
+      </div>
     </div>
 
-    <!-- CENTER: PIXEL OFFICE -->
-    <div class="office-area" id="office-area">
-      <canvas id="office"></canvas>
+    <!-- OFFICE + CHAT -->
+    <div class="office-chat-wrap">
+      <div class="office-area" id="office-area"><canvas id="office"></canvas></div>
+
+      <!-- CHAT BAR — only shown in room mode -->
+      <div class="chat-bar" id="chat-bar" style="display:none">
+        <div class="chat-toggle" onclick="toggleChat()">
+          <span style="font-size:14px">💬</span>
+          <span class="chat-toggle-label">ROOM CHAT</span>
+          <span class="chat-unread" id="chat-unread">0</span>
+          <span class="chat-chevron">▲</span>
+        </div>
+        <div class="chat-body" id="chat-body">
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-empty" id="chat-empty">NO MESSAGES YET.<br>SAY SOMETHING!</div>
+          </div>
+          <div class="chat-input-row">
+            <input class="chat-input" id="chat-input" placeholder="say something..." maxlength="120" autocomplete="off" onkeydown="if(event.key==='Enter')sendChat()">
+            <button class="chat-send" onclick="sendChat()">SEND ►</button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- RIGHT: ONLINE USERS -->
+    <!-- RIGHT -->
     <div class="right-panel">
       <div>
-        <div class="panel-title">► ONLINE NOW</div>
+        <div class="panel-title">► IN THE OFFICE</div>
         <div id="users-list"></div>
-        <div style="margin-top:12px;font-size:14px;color:var(--dim);line-height:1.6">
-          Multiplayer<br>coming soon.<br><br>Share a link<br>to invite<br>your crew.
+      </div>
+
+      <div id="solo-invite-section">
+        <hr class="invite-divider">
+        <div class="panel-title">► INVITE SOMEONE</div>
+        <div id="solo-invite-content">
+          <button class="invite-solo-btn" onclick="generateSoloInvite()">+ INVITE TO<br>YOUR SPACE</button>
         </div>
+      </div>
+
+      <div id="room-invite-section" style="display:none">
+        <hr class="invite-divider">
+        <div class="panel-title">► INVITE MORE</div>
+        <div class="invite-box">
+          <div class="invite-lbl">ROOM CODE</div>
+          <div class="invite-code-sm" id="room-code-sidebar">----</div>
+        </div>
+        <button class="t-btn" onclick="copyLink()" style="width:100%;font-size:6px">📋 COPY LINK</button>
       </div>
 
       <div style="margin-top:auto">
         <div class="panel-title">► VIBE</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="t-btn" style="width:100%;font-size:7px;" onclick="setVibe('lofi')">◉ LO-FI</button>
-          <button class="t-btn" style="width:100%;font-size:7px;" onclick="setVibe('rain')">◉ RAIN</button>
-          <button class="t-btn" style="width:100%;font-size:7px;" onclick="setVibe('cafe')">◉ CAFÉ</button>
-          <button class="t-btn" style="width:100%;font-size:7px;" onclick="setVibe('off')">○ OFF</button>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <button class="t-btn" style="width:100%;font-size:6px" onclick="setVibe('lofi')">◉ LO-FI</button>
+          <button class="t-btn" style="width:100%;font-size:6px" onclick="setVibe('rain')">◉ RAIN</button>
+          <button class="t-btn" style="width:100%;font-size:6px" onclick="setVibe('cafe')">◉ CAFÉ</button>
+          <button class="t-btn" style="width:100%;font-size:6px" onclick="setVibe('off')">○ OFF</button>
         </div>
       </div>
     </div>
-
   </div>
 
   <div class="statusbar">
-    <span>SESSION: <span class="sb-accent" id="session-elapsed">00:00</span></span>
-    <span>TASKS: <span class="sb-accent" id="sb-tasks">0/0</span></span>
+    <span>TIME: <span class="sb-g" id="session-elapsed">00:00</span></span>
+    <span>TASKS: <span class="sb-g" id="sb-tasks">0/0</span></span>
     <span id="sb-vibe" style="color:var(--purple)"></span>
-    <button class="clock-out-btn" onclick="clockOut()">CLOCK OUT</button>
+    <button class="co-btn" onclick="clockOut()">CLOCK OUT</button>
   </div>
-
 </div>
 
-<!-- CLOCK OUT SCREEN -->
-<div id="clockout-screen" class="screen">
+<!-- CLOCK OUT -->
+<div id="clockout-screen" class="screen" style="background:radial-gradient(ellipse at center,#0d1a0d 0%,#05050f 100%)">
   <div class="summary-card">
-    <div class="summary-title">SESSION COMPLETE!</div>
-
-    <div class="focus-score">
-      <span class="score-num" id="score-display">--</span>
-      <span class="score-label">FOCUS SCORE</span>
-    </div>
-
-    <div class="summary-stat">
-      <span class="label">Time Worked</span>
-      <span class="value" id="co-time">00:00</span>
-    </div>
-    <div class="summary-stat">
-      <span class="label">Sessions Done</span>
-      <span class="value" id="co-sessions">0</span>
-    </div>
-    <div class="summary-stat">
-      <span class="label">Tasks Complete</span>
-      <span class="value" id="co-tasks">0/0</span>
-    </div>
-
+    <div class="sum-title">SESSION COMPLETE!</div>
+    <div><span class="score-num" id="score-display">--</span><span class="score-lbl">FOCUS SCORE</span></div>
+    <div class="sum-stat"><span class="lbl">Time Worked</span><span class="val" id="co-time">00:00</span></div>
+    <div class="sum-stat"><span class="lbl">Sessions Done</span><span class="val" id="co-sessions">0</span></div>
+    <div class="sum-stat"><span class="lbl">Tasks Complete</span><span class="val" id="co-tasks">0/0</span></div>
     <div>
-      <div class="panel-title" style="margin-bottom:10px">► QUEST LOG</div>
-      <div class="task-summary" id="co-task-list"></div>
+      <div class="panel-title" style="margin-bottom:8px">► QUEST LOG</div>
+      <div id="co-task-list"></div>
     </div>
-
-    <button class="new-session-btn" onclick="newSession()">► START NEW SESSION ◄</button>
+    <button class="main-btn" onclick="newSession()">► START NEW SESSION ◄</button>
   </div>
 </div>
 
-<!-- NOTIFICATION -->
 <div class="notif" id="notif"></div>
 
 <script>
-// ============ STATE ============
-let state = {
-  username: '',
-  tasks: [],
-  sessionMins: 25,
-  timerSecs: 25 * 60,
-  timerMax: 25 * 60,
-  timerRunning: false,
-  timerInterval: null,
-  isBreak: false,
-  sessionsCompleted: 0,
-  sessionStartTime: null,
-  totalElapsed: 0,
-  elapsedInterval: null,
-  clockInterval: null,
-  vibeAudio: null,
-  currentVibe: null,
+const PARTYKIT_HOST = 'pixeldesk.product-sis.partykit.dev';
+const MAX_TASKS = 10;
+
+const S = {
+  username:'', tasks:[], sessionMins:25, timerSecs:1500, timerMax:1500,
+  timerRunning:false, timerInterval:null, isBreak:false, sessionsCompleted:0,
+  totalElapsed:0, elapsedInterval:null, clockInterval:null,
+  mode:'solo', roomCode:null, socket:null, remoteUsers:{},
+  myColorIdx:0, charFrame:0, animInterval:null,
+  chatOpen:false, unreadCount:0, chatMessages:[],
 };
 
-// ============ STARS BG ============
-function initStars() {
-  const c = document.getElementById('stars');
-  for (let i = 0; i < 80; i++) {
-    const s = document.createElement('div');
-    s.className = 'star';
-    s.style.left = Math.random() * 100 + '%';
-    s.style.top = Math.random() * 100 + '%';
-    s.style.setProperty('--d', (2 + Math.random() * 4) + 's');
-    s.style.setProperty('--delay', (Math.random() * 4) + 's');
-    s.style.setProperty('--op', (0.3 + Math.random() * 0.7).toString());
-    c.appendChild(s);
-  }
+const COLORS=[
+  {head:'#e94560',body:'#3a3a6a',hair:'#c04040'},
+  {head:'#9d4edd',body:'#2a2a5a',hair:'#5a1a9a'},
+  {head:'#ffd700',body:'#1a3a1a',hair:'#b8860b'},
+  {head:'#00d4ff',body:'#1a2a3a',hair:'#0088aa'},
+  {head:'#0fff50',body:'#1a3a2a',hair:'#0aaa30'},
+];
+
+// STARS
+(()=>{ const c=document.getElementById('stars'); for(let i=0;i<90;i++){ const s=document.createElement('div'); s.className='star'; s.style.left=Math.random()*100+'%'; s.style.top=Math.random()*100+'%'; s.style.setProperty('--d',(2+Math.random()*4)+'s'); s.style.setProperty('--delay',(Math.random()*4)+'s'); s.style.setProperty('--op',(0.3+Math.random()*0.6).toString()); c.appendChild(s); } })();
+
+function goTo(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+
+let generatedCode=null;
+
+function pickMode(mode) {
+  S.mode=mode;
+  if(mode==='solo') goTo('screen-solo');
+  else if(mode==='create'){ generatedCode=makeCode(); S.roomCode=generatedCode; document.getElementById('room-code-val').textContent=generatedCode; goTo('screen-create-code'); }
+  else { const p=new URLSearchParams(window.location.search); const r=p.get('room'); if(r) document.getElementById('join-code').value=r.toUpperCase(); goTo('screen-join'); }
 }
-initStars();
 
-// ============ SESSION SELECT ============
-function selectSession(btn, mins) {
-  document.querySelectorAll('.session-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  state.sessionMins = mins;
+function makeCode() { const ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c=''; for(let i=0;i<6;i++) c+=ch[Math.floor(Math.random()*ch.length)]; return c; }
+
+function copyLink() {
+  const code=S.roomCode||generatedCode;
+  const url=`${location.origin}${location.pathname}?room=${code}`;
+  navigator.clipboard.writeText(url).then(()=>{
+    const b=document.getElementById('copy-btn');
+    if(b){ b.textContent='✓ LINK COPIED!'; b.classList.add('copied'); setTimeout(()=>{ b.textContent='📋 COPY INVITE LINK'; b.classList.remove('copied'); },2500); }
+    showNotif('INVITE LINK COPIED! 📋');
+  });
 }
 
-// ============ CLOCK IN ============
-function clockIn() {
-  const name = document.getElementById('username-input').value.trim() || 'WORKER';
-  const t1 = document.getElementById('task1').value.trim();
-  const t2 = document.getElementById('task2').value.trim();
-  const t3 = document.getElementById('task3').value.trim();
+function goToJoinSetup() { const code=document.getElementById('join-code').value.trim().toUpperCase(); if(!code||code.length<4){ showNotif('ENTER A VALID ROOM CODE!'); return; } S.roomCode=code; goTo('screen-join-setup'); }
+function selSess(btn,mins) { btn.closest('.sess-opts').querySelectorAll('.sess-btn').forEach(b=>b.classList.remove('sel')); btn.classList.add('sel'); S.sessionMins=mins; }
 
-  state.username = name.toUpperCase();
-  state.tasks = [t1, t2, t3].filter(t => t).map(t => ({ text: t, done: false }));
-  if (state.tasks.length === 0) state.tasks = [{ text: 'GET STUFF DONE', done: false }];
+function startSolo() {
+  const name=(document.getElementById('solo-name').value.trim()||'WORKER').toUpperCase();
+  const tasks=['solo-t1','solo-t2','solo-t3'].map(id=>document.getElementById(id).value.trim()).filter(t=>t).map(t=>({text:t,done:false}));
+  launch(name, tasks.length?tasks:[{text:'GET STUFF DONE',done:false}], null);
+}
 
-  state.timerSecs = state.sessionMins * 60;
-  state.timerMax = state.sessionMins * 60;
-  state.sessionsCompleted = 0;
-  state.sessionStartTime = Date.now();
-  state.totalElapsed = 0;
+function startCreate() {
+  const name=(document.getElementById('create-name').value.trim()||'HOST').toUpperCase();
+  const tasks=['create-t1','create-t2','create-t3'].map(id=>document.getElementById(id).value.trim()).filter(t=>t).map(t=>({text:t,done:false}));
+  launch(name, tasks.length?tasks:[{text:'GET STUFF DONE',done:false}], S.roomCode);
+}
 
-  // transition
-  document.getElementById('clockin-screen').classList.remove('active');
-  document.getElementById('workspace-screen').classList.add('active');
+function startJoin() {
+  const name=(document.getElementById('join-name').value.trim()||'GUEST').toUpperCase();
+  const tasks=['join-t1','join-t2'].map(id=>document.getElementById(id).value.trim()).filter(t=>t).map(t=>({text:t,done:false}));
+  launch(name, tasks.length?tasks:[{text:'IN SESSION',done:false}], S.roomCode);
+}
 
+function launch(name,tasks,room) {
+  S.username=name; S.tasks=tasks; S.roomCode=room;
+  S.myColorIdx=Math.floor(Math.random()*COLORS.length);
+  S.timerSecs=S.sessionMins*60; S.timerMax=S.sessionMins*60;
+  S.sessionsCompleted=0; S.totalElapsed=0; S.remoteUsers={};
+  S.chatMessages=[]; S.unreadCount=0; S.chatOpen=false;
+  goTo('workspace-screen');
   initWorkspace();
+  if(room) connectRoom();
+}
+
+function initWorkspace() {
+  document.getElementById('topbar-user').textContent=S.username;
+  if(S.roomCode){
+    document.getElementById('room-badge').textContent='# '+S.roomCode;
+    document.getElementById('room-badge').style.display='';
+    document.getElementById('room-code-sidebar').textContent=S.roomCode;
+    document.getElementById('solo-invite-section').style.display='none';
+    document.getElementById('room-invite-section').style.display='';
+    document.getElementById('chat-bar').style.display='';
+  } else {
+    document.getElementById('room-badge').style.display='none';
+    document.getElementById('solo-invite-section').style.display='';
+    document.getElementById('room-invite-section').style.display='none';
+    document.getElementById('chat-bar').style.display='none';
+    document.getElementById('solo-invite-content').innerHTML=`<button class="invite-solo-btn" onclick="generateSoloInvite()">+ INVITE TO<br>YOUR SPACE</button>`;
+  }
+  renderTasks(); updateTimerDisplay(); startClock(); startElapsed(); initCanvas(); renderUsers();
   showNotif('CLOCKED IN. LET\'S GET IT. 🟢');
 }
 
-// ============ WORKSPACE INIT ============
-function initWorkspace() {
-  document.getElementById('topbar-user').textContent = state.username;
-  renderTasks();
-  updateTimerDisplay();
-  startClock();
-  startElapsed();
-  initOfficeCanvas();
-  renderUsers();
-  updateStatusBar();
+// ===== TASK CAP =====
+function updateTaskCounter() {
+  const n=S.tasks.length;
+  const counter=document.getElementById('task-counter');
+  counter.textContent=n+'/'+MAX_TASKS;
+  counter.className='task-counter'+(n>=MAX_TASKS?' full':'');
+  const inp=document.getElementById('add-task-input');
+  const btn=document.getElementById('add-task-btn');
+  if(n>=MAX_TASKS){
+    inp.disabled=true; inp.placeholder='max tasks reached';
+    btn.disabled=true;
+  } else {
+    inp.disabled=false; inp.placeholder='+ new quest...';
+    btn.disabled=false;
+  }
 }
 
 function renderTasks() {
-  const list = document.getElementById('task-list');
-  list.innerHTML = '';
-  state.tasks.forEach((task, i) => {
-    const el = document.createElement('div');
-    el.className = 'task-item' + (task.done ? ' done' : '');
-    el.innerHTML = `<div class="task-checkbox"></div><span class="task-text">${task.text}</span>`;
-    el.onclick = () => toggleTask(i);
-    list.appendChild(el);
-  });
-  updateStatusBar();
+  const list=document.getElementById('task-list'); list.innerHTML='';
+  S.tasks.forEach((t,i)=>{ const el=document.createElement('div'); el.className='task-item'+(t.done?' done':''); el.innerHTML=`<div class="task-cb"></div><span class="task-tx">${t.text}</span>`; el.onclick=()=>toggleTask(i); list.appendChild(el); });
+  document.getElementById('sb-tasks').textContent=S.tasks.filter(t=>t.done).length+'/'+S.tasks.length;
+  updateTaskCounter();
 }
 
 function toggleTask(i) {
-  state.tasks[i].done = !state.tasks[i].done;
+  S.tasks[i].done=!S.tasks[i].done; renderTasks();
+  if(S.tasks[i].done){ showNotif('QUEST COMPLETE! ✓'); spawnFloat('✓ DONE!',380,280); }
+  bcast({tasksDone:S.tasks.filter(t=>t.done).length,tasksTotal:S.tasks.length});
+}
+
+function addTask() {
+  if(S.tasks.length>=MAX_TASKS){ showNotif('MAX 10 QUESTS REACHED!'); return; }
+  const input=document.getElementById('add-task-input');
+  const text=input.value.trim();
+  if(!text){ showNotif('TYPE A QUEST FIRST!'); return; }
+  S.tasks.push({text,done:false});
+  input.value='';
   renderTasks();
-  if (state.tasks[i].done) {
-    showNotif('QUEST COMPLETE! ✓');
-    spawnFloatMsg('✓ TASK DONE!', 400, 300);
-  }
+  bcast({tasksDone:S.tasks.filter(t=>t.done).length,tasksTotal:S.tasks.length});
+  showNotif('QUEST ADDED! ✚');
 }
 
-function updateStatusBar() {
-  const done = state.tasks.filter(t => t.done).length;
-  document.getElementById('sb-tasks').textContent = done + '/' + state.tasks.length;
+// ===== SOLO INVITE =====
+function generateSoloInvite() {
+  const code=makeCode(); S.roomCode=code; generatedCode=code;
+  document.getElementById('room-badge').textContent='# '+code;
+  document.getElementById('room-badge').style.display='';
+  document.getElementById('chat-bar').style.display='';
+  connectRoom();
+  document.getElementById('solo-invite-content').innerHTML=`
+    <div class="invite-generated">
+      <div class="invite-code-mini"><div class="lbl">ROOM CODE</div><div class="code">${code}</div></div>
+      <button class="t-btn" onclick="copySoloLink()" style="width:100%;font-size:6px">📋 COPY INVITE LINK</button>
+      <div style="font-size:12px;color:var(--dim);line-height:1.6;margin-top:2px">Waiting for<br>your crew...</div>
+    </div>`;
+  showNotif('ROOM CREATED! SHARE THE LINK 🔗');
 }
 
-// ============ CLOCK ============
-function startClock() {
-  function tick() {
-    const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    document.getElementById('topbar-clock').textContent = h + ':' + m;
-  }
-  tick();
-  state.clockInterval = setInterval(tick, 10000);
+function copySoloLink() {
+  const url=`${location.origin}${location.pathname}?room=${S.roomCode}`;
+  navigator.clipboard.writeText(url).then(()=>showNotif('INVITE LINK COPIED! 📋'));
 }
 
-function startElapsed() {
-  state.elapsedInterval = setInterval(() => {
-    state.totalElapsed++;
-    const m = Math.floor(state.totalElapsed / 60);
-    const s = state.totalElapsed % 60;
-    document.getElementById('session-elapsed').textContent =
-      String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-  }, 1000);
-}
-
-// ============ TIMER ============
-function updateTimerDisplay() {
-  const m = Math.floor(state.timerSecs / 60);
-  const s = state.timerSecs % 60;
-  document.getElementById('timer-digits').textContent =
-    String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-
-  const progress = state.timerSecs / state.timerMax;
-  const circumference = 283;
-  const offset = circumference * (1 - progress);
-  const ring = document.getElementById('ring-progress');
-  ring.style.strokeDashoffset = offset;
-
-  if (state.isBreak) {
-    ring.classList.add('break-mode');
-    document.getElementById('timer-mode-label').textContent = 'BREAK';
+// ===== CHAT =====
+function toggleChat() {
+  const bar=document.getElementById('chat-bar');
+  S.chatOpen=!S.chatOpen;
+  if(S.chatOpen){
+    bar.classList.add('open');
+    S.unreadCount=0;
+    document.getElementById('chat-unread').textContent='0';
+    document.getElementById('chat-unread').classList.remove('show');
+    setTimeout(()=>{ const m=document.getElementById('chat-messages'); m.scrollTop=m.scrollHeight; },50);
+    setTimeout(()=>document.getElementById('chat-input').focus(),100);
   } else {
-    ring.classList.remove('break-mode');
-    document.getElementById('timer-mode-label').textContent =
-      state.sessionMins === 25 ? 'POMODORO' : state.sessionMins === 50 ? 'DEEP WORK' : 'FLOW';
+    bar.classList.remove('open');
   }
+}
+
+function sendChat() {
+  const input=document.getElementById('chat-input');
+  const text=input.value.trim();
+  if(!text) return;
+  input.value='';
+  const msg={type:'chat',name:S.username,text,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),colorIdx:S.myColorIdx};
+  addChatMessage(msg);
+  if(S.socket&&S.socket.readyState===WebSocket.OPEN) S.socket.send(JSON.stringify({type:'ping',msg:JSON.stringify(msg)}));
+}
+
+function addChatMessage(msg) {
+  const empty=document.getElementById('chat-empty');
+  if(empty) empty.remove();
+  const col=COLORS[msg.colorIdx||0];
+  const container=document.getElementById('chat-messages');
+  const el=document.createElement('div');
+  el.className='chat-msg';
+  el.innerHTML=`<span class="msg-name" style="color:${col.head}">${msg.name}</span><span class="msg-text">${escapeHtml(msg.text)}</span><span class="msg-time">${msg.time}</span>`;
+  container.appendChild(el);
+  container.scrollTop=container.scrollHeight;
+  S.chatMessages.push(msg);
+  if(S.chatMessages.length>50) S.chatMessages.shift();
+  if(!S.chatOpen){
+    S.unreadCount++;
+    const u=document.getElementById('chat-unread');
+    u.textContent=S.unreadCount;
+    u.classList.add('show');
+  }
+}
+
+function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ===== PARTYKIT =====
+function connectRoom() {
+  if(S.socket&&S.socket.readyState===WebSocket.OPEN) return;
+  try {
+    S.socket=new WebSocket(`wss://${PARTYKIT_HOST}/party/${S.roomCode}`);
+    S.socket.onopen=()=>{
+      S.socket.send(JSON.stringify({type:'join',user:{name:S.username,status:'idle',colorIdx:S.myColorIdx,tasksDone:0,tasksTotal:S.tasks.length}}));
+      if(S.mode!=='solo') showNotif('CONNECTED TO ROOM '+S.roomCode+' 🟢');
+    };
+    S.socket.onmessage=(e)=>{
+      const d=JSON.parse(e.data);
+      if(d.type==='init'){ S.remoteUsers={}; d.users.forEach(u=>{if(u.id)S.remoteUsers[u.id]=u;}); renderUsers(); drawOffice(); }
+      if(d.type==='joined'){ S.remoteUsers[d.user.id]=d.user; renderUsers(); drawOffice(); showNotif(d.user.name+' JOINED! 👋'); spawnFloat('👋 '+d.user.name+'!',300,200); }
+      if(d.type==='updated'){ if(S.remoteUsers[d.user.id]){ S.remoteUsers[d.user.id]={...S.remoteUsers[d.user.id],...d.user}; renderUsers(); drawOffice(); } }
+      if(d.type==='left'){ const g=S.remoteUsers[d.id]; if(g){ showNotif(g.name+' LEFT'); delete S.remoteUsers[d.id]; renderUsers(); drawOffice(); } }
+      if(d.type==='ping'){
+        // ping is used for chat messages
+        try {
+          const msg=JSON.parse(d.msg);
+          if(msg.type==='chat') addChatMessage(msg);
+        } catch(e){}
+      }
+    };
+    S.socket.onclose=()=>{ if(S.roomCode) showNotif('DISCONNECTED FROM ROOM'); };
+  } catch(e){ console.log(e); }
+}
+
+function bcast(u) { if(S.socket&&S.socket.readyState===WebSocket.OPEN) S.socket.send(JSON.stringify({type:'update',update:u})); }
+
+// ===== CLOCK =====
+function startClock() { const t=()=>{ const n=new Date(); document.getElementById('topbar-clock').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0'); }; t(); S.clockInterval=setInterval(t,10000); }
+function startElapsed() { S.elapsedInterval=setInterval(()=>{ S.totalElapsed++; const m=Math.floor(S.totalElapsed/60),s=S.totalElapsed%60; document.getElementById('session-elapsed').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); },1000); }
+
+// ===== TIMER =====
+function updateTimerDisplay() {
+  const m=Math.floor(S.timerSecs/60),s=S.timerSecs%60;
+  document.getElementById('timer-digits').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  document.getElementById('ring-prog').style.strokeDashoffset=283*(1-S.timerSecs/S.timerMax);
+  const rp=document.getElementById('ring-prog');
+  if(S.isBreak){rp.classList.add('brk');document.getElementById('timer-lbl').textContent='BREAK';}
+  else{rp.classList.remove('brk');document.getElementById('timer-lbl').textContent=S.sessionMins===25?'POMODORO':S.sessionMins===50?'DEEP WORK':'FLOW';}
 }
 
 function toggleTimer() {
-  if (state.timerRunning) {
-    clearInterval(state.timerInterval);
-    state.timerRunning = false;
-    document.getElementById('btn-start').textContent = 'START';
-    document.getElementById('status-dot').className = 'status-dot idle';
-    document.getElementById('status-text').textContent = 'PAUSED';
+  if(S.timerRunning){
+    clearInterval(S.timerInterval); S.timerRunning=false;
+    document.getElementById('btn-start').textContent='START'; document.getElementById('btn-start').classList.remove('act');
+    document.getElementById('status-dot').className='status-dot idle'; document.getElementById('status-text').textContent='PAUSED';
+    bcast({status:'paused'});
   } else {
-    state.timerRunning = true;
-    document.getElementById('btn-start').textContent = 'PAUSE';
-    document.getElementById('status-dot').className = 'status-dot';
-    document.getElementById('status-text').textContent = state.isBreak ? 'ON BREAK' : 'DEEP FOCUS';
-    state.timerInterval = setInterval(() => {
-      state.timerSecs--;
-      updateTimerDisplay();
-      animateChar();
-      if (state.timerSecs <= 0) {
-        timerDone();
-      }
-    }, 1000);
+    S.timerRunning=true;
+    document.getElementById('btn-start').textContent='PAUSE'; document.getElementById('btn-start').classList.add('act');
+    document.getElementById('status-dot').className='status-dot'+(S.isBreak?' brk':'');
+    document.getElementById('status-text').textContent=S.isBreak?'ON BREAK':'DEEP FOCUS';
+    bcast({status:S.isBreak?'break':'focus'});
+    S.timerInterval=setInterval(()=>{ S.timerSecs--; updateTimerDisplay(); if(S.timerSecs%8===0){S.charFrame=(S.charFrame+1)%4;drawOffice();} if(S.timerSecs<=0)timerDone(); },1000);
   }
 }
 
-function resetTimer() {
-  clearInterval(state.timerInterval);
-  state.timerRunning = false;
-  state.isBreak = false;
-  state.timerSecs = state.sessionMins * 60;
-  state.timerMax = state.sessionMins * 60;
-  document.getElementById('btn-start').textContent = 'START';
-  updateTimerDisplay();
-}
+function resetTimer() { clearInterval(S.timerInterval); S.timerRunning=false; S.isBreak=false; S.timerSecs=S.sessionMins*60; S.timerMax=S.sessionMins*60; document.getElementById('btn-start').textContent='START'; document.getElementById('btn-start').classList.remove('act'); updateTimerDisplay(); }
 
-function startBreak() {
-  clearInterval(state.timerInterval);
-  state.timerRunning = false;
-  state.isBreak = true;
-  state.timerSecs = 5 * 60;
-  state.timerMax = 5 * 60;
-  document.getElementById('btn-start').textContent = 'START';
-  document.getElementById('status-dot').className = 'status-dot break';
-  document.getElementById('status-text').textContent = 'ON BREAK';
-  updateTimerDisplay();
-  showNotif('BREAK TIME! STRETCH IT OUT. ☕');
-}
+function startBreak() { clearInterval(S.timerInterval); S.timerRunning=false; S.isBreak=true; S.timerSecs=300; S.timerMax=300; document.getElementById('btn-start').textContent='START'; document.getElementById('btn-start').classList.remove('act'); document.getElementById('status-dot').className='status-dot brk'; document.getElementById('status-text').textContent='ON BREAK'; updateTimerDisplay(); bcast({status:'break'}); showNotif('BREAK TIME! ☕'); }
 
 function timerDone() {
-  clearInterval(state.timerInterval);
-  state.timerRunning = false;
-  document.getElementById('btn-start').textContent = 'START';
-
-  if (!state.isBreak) {
-    state.sessionsCompleted++;
-    const dots = document.querySelectorAll('.pomo-dot');
-    if (state.sessionsCompleted <= dots.length) {
-      dots[state.sessionsCompleted - 1].classList.add('done');
-    }
-    showNotif('SESSION DONE! TAKE A BREAK. 🎉');
-    spawnFloatMsg('🎉 SESSION COMPLETE!', 400, 200);
-  } else {
-    state.isBreak = false;
-    state.timerSecs = state.sessionMins * 60;
-    state.timerMax = state.sessionMins * 60;
-    showNotif('BREAK OVER. BACK TO WORK! ⚡');
-  }
+  clearInterval(S.timerInterval); S.timerRunning=false; document.getElementById('btn-start').textContent='START'; document.getElementById('btn-start').classList.remove('act');
+  if(!S.isBreak){ S.sessionsCompleted++; const dots=document.querySelectorAll('.pdot'); if(S.sessionsCompleted<=dots.length) dots[S.sessionsCompleted-1].classList.add('done'); showNotif('SESSION DONE! 🎉'); spawnFloat('🎉 COMPLETE!',380,200); bcast({status:'break',sessions:S.sessionsCompleted}); }
+  else{ S.isBreak=false; S.timerSecs=S.sessionMins*60; S.timerMax=S.sessionMins*60; showNotif('BREAK OVER. BACK TO IT! ⚡'); bcast({status:'focus'}); }
   updateTimerDisplay();
 }
 
-// ============ CLOCK OUT ============
+// ===== CLOCK OUT =====
 function clockOut() {
-  clearInterval(state.timerInterval);
-  clearInterval(state.elapsedInterval);
-  clearInterval(state.clockInterval);
-  state.timerRunning = false;
-
-  const m = Math.floor(state.totalElapsed / 60);
-  const s = state.totalElapsed % 60;
-  const timeStr = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-  const doneTasks = state.tasks.filter(t => t.done).length;
-  const totalTasks = state.tasks.length;
-
-  // score calc
-  const taskScore = totalTasks > 0 ? (doneTasks / totalTasks) * 40 : 20;
-  const sessionScore = Math.min(state.sessionsCompleted * 15, 40);
-  const timeScore = Math.min(Math.floor(state.totalElapsed / 60) * 0.5, 20);
-  const score = Math.round(taskScore + sessionScore + timeScore);
-
-  document.getElementById('co-time').textContent = timeStr;
-  document.getElementById('co-sessions').textContent = state.sessionsCompleted;
-  document.getElementById('co-tasks').textContent = doneTasks + '/' + totalTasks;
-  document.getElementById('score-display').textContent = score;
-
-  const coList = document.getElementById('co-task-list');
-  coList.innerHTML = state.tasks.map(t =>
-    `<div class="task-summary-item">
-      <span class="${t.done ? 'check-icon' : 'cross-icon'}">${t.done ? '✓' : '○'}</span>
-      <span style="color:${t.done ? 'var(--text)' : 'var(--dim)'}">${t.text}</span>
-    </div>`
-  ).join('');
-
-  document.getElementById('workspace-screen').classList.remove('active');
-  document.getElementById('clockout-screen').classList.add('active');
+  clearInterval(S.timerInterval); clearInterval(S.elapsedInterval); clearInterval(S.clockInterval); clearInterval(S.animInterval); S.timerRunning=false;
+  if(S.socket) S.socket.close();
+  const m=Math.floor(S.totalElapsed/60),s=S.totalElapsed%60;
+  const done=S.tasks.filter(t=>t.done).length,total=S.tasks.length;
+  const score=Math.round((total>0?(done/total)*40:20)+Math.min(S.sessionsCompleted*15,40)+Math.min(Math.floor(S.totalElapsed/60)*0.5,20));
+  document.getElementById('co-time').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  document.getElementById('co-sessions').textContent=S.sessionsCompleted;
+  document.getElementById('co-tasks').textContent=done+'/'+total;
+  document.getElementById('score-display').textContent=score;
+  document.getElementById('co-task-list').innerHTML=S.tasks.map(t=>`<div class="task-sum-item"><span style="color:${t.done?'var(--green)':'var(--dim)'}">${t.done?'✓':'○'}</span><span style="color:${t.done?'var(--text)':'var(--dim)'}">${t.text}</span></div>`).join('');
+  goTo('clockout-screen');
 }
 
 function newSession() {
-  document.getElementById('clockout-screen').classList.remove('active');
-  document.getElementById('clockin-screen').classList.add('active');
-  // reset
-  state.timerRunning = false;
-  state.isBreak = false;
-  state.sessionsCompleted = 0;
-  state.totalElapsed = 0;
-  document.querySelectorAll('.pomo-dot').forEach(d => d.classList.remove('done'));
-  document.getElementById('task1').value = '';
-  document.getElementById('task2').value = '';
-  document.getElementById('task3').value = '';
+  S.remoteUsers={}; S.roomCode=null; S.socket=null; generatedCode=null;
+  document.querySelectorAll('.pdot').forEach(d=>d.classList.remove('done'));
+  window.history.replaceState({},'',location.pathname);
+  goTo('screen-mode');
 }
 
-// ============ PIXEL OFFICE CANVAS ============
-const TILE = 32;
-const COLORS = {
-  floor1: '#1e1e3a',
-  floor2: '#181830',
-  wall: '#0d0d20',
-  desk: '#3d2b1a',
-  deskTop: '#4a3520',
-  monitor: '#111',
-  screen: '#00d4ff',
-  screenGlow: '#003344',
-  plant: '#1a4a1a',
-  plantLeaf: '#2d8a2d',
-  chair: '#222244',
-  chairBack: '#2a2a5a',
-  window: '#001133',
-  windowLight: '#002255',
-  rug: '#2a1a2a',
-  lamp: '#c8a020',
-  lampGlow: '#332200',
-  char: '#e94560',
-  charBody: '#3a3a6a',
-  charHead: '#f4c07a',
-  coffee: '#6a3a1a',
-};
+// ===== USERS =====
+function renderUsers() {
+  const list=document.getElementById('users-list');
+  const remote=Object.values(S.remoteUsers);
+  const myCol=COLORS[S.myColorIdx];
+  const mySt=S.timerRunning?(S.isBreak?'on break':'focusing'):'idle';
+  let html=`<div class="online-user"><canvas class="user-av" width="26" height="26" id="av-me"></canvas><div class="user-info"><div class="user-nm">${S.username||'YOU'}</div><div class="user-st">${mySt}</div></div><div class="udot ${S.timerRunning&&!S.isBreak?'':S.isBreak?'brk':'idle'}"></div></div>`;
+  remote.forEach((u,i)=>{ const col=COLORS[u.colorIdx||((i+1)%COLORS.length)]; const st=u.status||'idle'; html+=`<div class="online-user"><div style="width:26px;height:26px;background:${col.head}22;border:1px solid ${col.head};display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P';font-size:6px;color:${col.head};flex-shrink:0">${(u.name||'?')[0]}</div><div class="user-info"><div class="user-nm">${u.name||'anon'}</div><div class="user-st">${st}</div></div><div class="udot ${st==='focus'?'':st==='break'?'brk':'idle'}"></div></div>`; });
+  list.innerHTML=html;
+  setTimeout(()=>{ const av=document.getElementById('av-me'); if(av){ const ctx=av.getContext('2d'); ctx.fillStyle=myCol.body; ctx.fillRect(8,14,10,10); ctx.fillStyle=myCol.head; ctx.fillRect(7,6,12,10); ctx.fillStyle='#000'; ctx.fillRect(9,9,3,3); ctx.fillRect(14,9,3,3); ctx.fillStyle=myCol.hair; ctx.fillRect(7,4,12,4); } },30);
+}
 
-let charX = 0, charY = 0;
-let charFrame = 0;
-let charAnim = 0;
-let charDir = 1; // 1 = right, -1 = left
+// ===== CANVAS =====
+const TILE=32;
+const PC={floor1:'#1e1e3a',floor2:'#181830',wall:'#0d0d20',desk:'#3d2b1a',deskTop:'#4a3520',monitor:'#111',screenGlow:'#003344',screen:'#00d4ff',plant:'#1a4a1a',plantLeaf:'#2d8a2d',chair:'#222244',chairBack:'#2a2a5a',rug:'#2a1a2a',coffee:'#6a3a1a'};
+const DPOS=[{x:0.5,y:0.5},{x:0.2,y:0.52},{x:0.8,y:0.52},{x:0.35,y:0.52},{x:0.65,y:0.52}];
 
-function initOfficeCanvas() {
-  const area = document.getElementById('office-area');
-  const canvas = document.getElementById('office');
-  const W = area.clientWidth;
-  const H = area.clientHeight;
-  canvas.width = W;
-  canvas.height = H;
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
+// ===== TIME OF DAY =====
+function getSkyColors() {
+  const h=new Date().getHours();
+  if(h>=5&&h<7){
+    // Dawn — pink/orange
+    return {top:'#1a0a1a',bottom:'#3d1a0d',starOpacity:0.3,cloudColor:'rgba(255,150,80,0.15)',sunColor:'#ff6a00',hasSun:true,sunY:0.7,label:'DAWN'};
+  } else if(h>=7&&h<17){
+    // Day — blue sky
+    return {top:'#0a2a5a',bottom:'#1a6aaa',starOpacity:0,cloudColor:'rgba(255,255,255,0.18)',sunColor:'#ffe066',hasSun:true,sunY:h<12?0.4:0.25,label:'DAY'};
+  } else if(h>=17&&h<20){
+    // Dusk — orange/purple
+    return {top:'#1a0a2a',bottom:'#5a2a0a',starOpacity:0.2,cloudColor:'rgba(255,120,50,0.2)',sunColor:'#ff4400',hasSun:true,sunY:0.75,label:'DUSK'};
+  } else {
+    // Night — dark blue/stars
+    return {top:'#000510',bottom:'#001030',starOpacity:0.9,cloudColor:null,hasSun:false,label:'NIGHT'};
+  }
+}
 
-  charX = Math.floor(W / 2);
-  charY = Math.floor(H / 2);
-
+function initCanvas() {
+  const area=document.getElementById('office-area'); const canvas=document.getElementById('office');
+  const W=area.clientWidth,H=area.clientHeight;
+  canvas.width=W; canvas.height=H; canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  clearInterval(S.animInterval);
+  S.animInterval=setInterval(()=>{ if(!S.timerRunning&&document.getElementById('workspace-screen').classList.contains('active')){S.charFrame=(S.charFrame+1)%4;drawOffice();} },700);
   drawOffice();
 }
 
 function drawOffice() {
-  const canvas = document.getElementById('office');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width;
-  const H = canvas.height;
+  const canvas=document.getElementById('office'); if(!canvas) return;
+  const ctx=canvas.getContext('2d'); const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
 
-  ctx.clearRect(0, 0, W, H);
+  for(let y=0;y<Math.ceil(H/TILE)+1;y++) for(let x=0;x<Math.ceil(W/TILE)+1;x++){ ctx.fillStyle=(x+y)%2===0?PC.floor1:PC.floor2; ctx.fillRect(x*TILE,y*TILE,TILE,TILE); }
+  ctx.fillStyle=PC.rug; ctx.fillRect(W/2-140,H/2-70,280,135); ctx.strokeStyle='#3a2a3a'; ctx.lineWidth=2; ctx.strokeRect(W/2-130,H/2-60,260,115);
+  ctx.fillStyle=PC.wall; ctx.fillRect(0,0,W,82); ctx.fillStyle='#1a1a35'; ctx.fillRect(0,80,W,4);
 
-  // Floor checkerboard
-  for (let y = 0; y < Math.ceil(H / TILE) + 1; y++) {
-    for (let x = 0; x < Math.ceil(W / TILE) + 1; x++) {
-      ctx.fillStyle = (x + y) % 2 === 0 ? COLORS.floor1 : COLORS.floor2;
-      ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
-    }
-  }
+  drawWin(ctx,W/2-95,8,190,68);
+  drawPlant(ctx,55,H/2+15); drawPlant(ctx,W-70,H/2+15);
 
-  // Rug
-  ctx.fillStyle = COLORS.rug;
-  roundRect(ctx, W/2 - 120, H/2 - 60, 240, 120, 0);
-  ctx.fillStyle = '#3a1a3a';
-  ctx.strokeStyle = '#4a2a4a';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(W/2 - 110, H/2 - 50, 220, 100);
-
-  // Back wall hint
-  ctx.fillStyle = COLORS.wall;
-  ctx.fillRect(0, 0, W, 80);
-  ctx.fillStyle = '#1a1a35';
-  ctx.fillRect(0, 78, W, 4);
-
-  // Window
-  drawWindow(ctx, W/2 - 80, 10, 160, 65);
-
-  // Plant left
-  drawPlant(ctx, 60, H/2 + 20);
-
-  // Plant right
-  drawPlant(ctx, W - 80, H/2 + 20);
-
-  // Desk 1 - center (player desk)
-  drawDesk(ctx, W/2 - 60, H/2 - 40, true);
-
-  // Desk 2 - left
-  drawDesk(ctx, 80, H/2 - 20, false);
-
-  // Desk 3 - right
-  drawDesk(ctx, W - 180, H/2 - 20, false);
-
-  // Lamp
-  drawLamp(ctx, W/2 + 70, H/2 - 55);
-
-  // Draw player character
-  drawChar(ctx, charX, charY, COLORS.char, COLORS.charBody, charFrame, state.timerRunning && !state.isBreak);
-
-  // NPC chars (placeholder coworkers)
-  drawChar(ctx, 100, H/2 + 10, '#9d4edd', '#2a2a5a', Math.floor(charFrame / 2) % 2, false);
-  drawChar(ctx, W - 150, H/2 + 10, '#ffd700', '#1a3a1a', (charFrame + 1) % 2, false);
-
-  // Coffee cup on player desk
-  drawCoffee(ctx, W/2 + 10, H/2 - 32);
+  const pd=DPOS[0]; const px=Math.floor(W*pd.x-60),py=Math.floor(H*pd.y-40);
+  drawDesk(ctx,px,py,true); drawChar(ctx,px+60,py+30,COLORS[S.myColorIdx],S.username,S.timerRunning&&!S.isBreak,S.charFrame);
+  drawCoffee(ctx,px+12,py-30);
+  Object.values(S.remoteUsers).forEach((u,i)=>{ const dp=DPOS[Math.min(i+1,DPOS.length-1)]; const dx=Math.floor(W*dp.x-60),dy=Math.floor(H*dp.y-40); drawDesk(ctx,dx,dy,false); drawChar(ctx,dx+60,dy+30,COLORS[u.colorIdx||((i+1)%COLORS.length)],u.name||'?',u.status==='focus',(S.charFrame+i+1)%4); });
 }
 
-function drawDesk(ctx, x, y, isPlayer) {
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fillRect(x - 2, y + 54, 124, 8);
+function drawWin(ctx,x,y,w,h) {
+  const sky=getSkyColors();
 
-  // Desk body
-  ctx.fillStyle = COLORS.desk;
-  ctx.fillRect(x, y + 16, 120, 40);
-
-  // Desk top surface
-  ctx.fillStyle = COLORS.deskTop;
-  ctx.fillRect(x, y + 12, 120, 8);
-
-  // Desk legs
-  ctx.fillStyle = '#2a1a0a';
-  ctx.fillRect(x + 6, y + 52, 8, 10);
-  ctx.fillRect(x + 106, y + 52, 8, 10);
-
-  // Monitor
-  ctx.fillStyle = COLORS.monitor;
-  ctx.fillRect(x + 30, y - 24, 60, 38);
-
-  // Screen glow
-  ctx.fillStyle = isPlayer ? COLORS.screenGlow : '#001122';
-  ctx.fillRect(x + 33, y - 21, 54, 32);
-
-  // Screen content
-  if (isPlayer) {
-    ctx.fillStyle = COLORS.screen;
-    // Fake text lines on screen
-    for (let i = 0; i < 4; i++) {
-      ctx.fillRect(x + 37, y - 17 + i * 7, 20 + (i % 2) * 12, 3);
-    }
-    ctx.fillStyle = COLORS.green;
-    ctx.fillRect(x + 37, y - 17 + 4 * 7, 8, 3); // cursor
-  } else {
-    ctx.fillStyle = '#002244';
-    ctx.fillRect(x + 33, y - 21, 54, 32);
-  }
-
-  // Monitor stand
-  ctx.fillStyle = '#1a1a1a';
-  ctx.fillRect(x + 55, y + 12, 10, 4);
-
-  // Chair
-  ctx.fillStyle = COLORS.chairBack;
-  ctx.fillRect(x + 40, y + 40, 40, 18);
-  ctx.fillStyle = COLORS.chair;
-  ctx.fillRect(x + 38, y + 54, 44, 8);
-
-  // Keyboard (player desk)
-  if (isPlayer) {
-    ctx.fillStyle = '#222233';
-    ctx.fillRect(x + 28, y + 18, 48, 10);
-    ctx.fillStyle = '#333344';
-    for (let ki = 0; ki < 8; ki++) {
-      ctx.fillRect(x + 30 + ki * 5, y + 20, 4, 3);
-    }
-    for (let ki = 0; ki < 7; ki++) {
-      ctx.fillRect(x + 32 + ki * 5, y + 24, 4, 3);
-    }
-  }
-}
-
-function drawChar(ctx, x, y, headColor, bodyColor, frame, typing) {
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.beginPath();
-  ctx.ellipse(x, y + 2, 10, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Body
-  ctx.fillStyle = bodyColor;
-  ctx.fillRect(x - 6, y - 14, 12, 12);
-
-  // Arms (typing animation)
-  ctx.fillStyle = bodyColor;
-  if (typing) {
-    const armOff = frame % 2 === 0 ? 0 : 2;
-    ctx.fillRect(x - 10, y - 12 + armOff, 4, 6);
-    ctx.fillRect(x + 6, y - 12 + (1 - armOff/2), 4, 6);
-  } else {
-    ctx.fillRect(x - 10, y - 12, 4, 6);
-    ctx.fillRect(x + 6, y - 12, 4, 6);
-  }
-
-  // Head
-  ctx.fillStyle = headColor;
-  ctx.fillRect(x - 7, y - 26, 14, 12);
-
-  // Eyes
-  ctx.fillStyle = '#000';
-  ctx.fillRect(x - 4, y - 22, 3, 3);
-  ctx.fillRect(x + 1, y - 22, 3, 3);
-
-  // Glasses on player
-  if (headColor === COLORS.char) {
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x - 5, y - 23, 5, 4);
-    ctx.strokeRect(x, y - 23, 5, 4);
-    ctx.fillStyle = '#333';
-    ctx.fillRect(x - 5, y - 21, 1, 1);
-    ctx.fillRect(x + 4, y - 21, 1, 1);
-  }
-
-  // Hair
-  ctx.fillStyle = headColor === COLORS.char ? '#c04040' : (headColor === '#9d4edd' ? '#5a1a9a' : '#b8860b');
-  ctx.fillRect(x - 7, y - 28, 14, 4);
-  ctx.fillRect(x - 9, y - 26, 3, 4);
-
-  // Name tag (player only)
-  if (headColor === COLORS.char && state.username) {
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    const nameW = state.username.length * 5 + 8;
-    ctx.fillRect(x - nameW/2, y - 36, nameW, 10);
-    ctx.fillStyle = COLORS.char;
-    ctx.font = '8px "Press Start 2P"';
-    ctx.textAlign = 'center';
-    ctx.fillText(state.username.substring(0, 6), x, y - 29);
-  }
-
-  ctx.textAlign = 'left';
-}
-
-function drawWindow(ctx, x, y, w, h) {
   // Frame
-  ctx.fillStyle = '#2a2a4a';
-  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle='#2a2a4a'; ctx.fillRect(x,y,w,h);
 
   // Sky gradient
-  const sky = ctx.createLinearGradient(x, y, x, y + h);
-  sky.addColorStop(0, '#000d33');
-  sky.addColorStop(1, '#001155');
-  ctx.fillStyle = sky;
-  ctx.fillRect(x + 4, y + 4, w - 8, h - 8);
+  const grad=ctx.createLinearGradient(x,y,x,y+h);
+  grad.addColorStop(0,sky.top); grad.addColorStop(1,sky.bottom);
+  ctx.fillStyle=grad; ctx.fillRect(x+4,y+4,w-8,h-8);
 
-  // Stars in window
-  ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  const wstars = [[10,8],[30,5],[50,12],[80,6],[120,9],[100,15],[140,7],[20,18]];
-  wstars.forEach(([sx, sy]) => {
-    if (sx < w - 8 && sy < h - 8) {
-      ctx.fillRect(x + 4 + sx, y + 4 + sy, 2, 2);
-    }
-  });
+  // Stars (night/dawn/dusk)
+  if(sky.starOpacity>0){
+    ctx.fillStyle=`rgba(255,255,255,${sky.starOpacity})`;
+    [[10,8],[30,5],[50,12],[80,6],[120,9],[100,15],[140,7],[20,18],[160,11],[55,4],[90,16],[170,8]].forEach(([sx,sy])=>{ if(sx<w-8&&sy<h-8) ctx.fillRect(x+4+sx,y+4+sy,2,2); });
+  }
 
-  // Window dividers
-  ctx.fillStyle = '#2a2a4a';
-  ctx.fillRect(x + w/2 - 1, y, 2, h);
-  ctx.fillRect(x, y + h/2 - 1, w, 2);
+  // Sun (day/dawn/dusk)
+  if(sky.hasSun){
+    const sx=x+w*0.7, sy=y+h*sky.sunY;
+    const sunGrad=ctx.createRadialGradient(sx,sy,0,sx,sy,8);
+    sunGrad.addColorStop(0,sky.sunColor); sunGrad.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=sunGrad; ctx.beginPath(); ctx.arc(sx,sy,8,0,Math.PI*2); ctx.fill();
+    // Glow
+    const glowGrad=ctx.createRadialGradient(sx,sy,0,sx,sy,18);
+    glowGrad.addColorStop(0,sky.sunColor+'44'); glowGrad.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=glowGrad; ctx.beginPath(); ctx.arc(sx,sy,18,0,Math.PI*2); ctx.fill();
+  }
 
-  // Glow below window
-  const glowGrad = ctx.createLinearGradient(0, y + h, 0, y + h + 30);
-  glowGrad.addColorStop(0, 'rgba(0,50,150,0.15)');
-  glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glowGrad;
-  ctx.fillRect(x - 10, y + h, w + 20, 30);
-}
+  // Clouds (day/dawn/dusk)
+  if(sky.cloudColor){
+    ctx.fillStyle=sky.cloudColor;
+    [[15,20,30,10],[60,14,40,12],[110,22,28,9],[145,12,35,11]].forEach(([cx,cy,cw,ch])=>{
+      if(cx<w-8){ ctx.beginPath(); ctx.ellipse(x+4+cx,y+4+cy,cw,ch,0,0,Math.PI*2); ctx.fill(); }
+    });
+  }
 
-function drawPlant(ctx, x, y) {
-  // Pot
-  ctx.fillStyle = '#6a3a2a';
-  ctx.fillRect(x - 10, y, 20, 16);
-  ctx.fillStyle = '#4a2a1a';
-  ctx.fillRect(x - 12, y, 24, 5);
+  // Moon (night)
+  if(!sky.hasSun&&sky.starOpacity>0.5){
+    ctx.fillStyle='rgba(220,220,180,0.9)';
+    ctx.beginPath(); ctx.arc(x+w-24,y+16,7,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=sky.top;
+    ctx.beginPath(); ctx.arc(x+w-21,y+14,6,0,Math.PI*2); ctx.fill();
+  }
 
-  // Soil
-  ctx.fillStyle = '#2a1a0a';
-  ctx.fillRect(x - 8, y + 2, 16, 3);
+  // Window frame dividers
+  ctx.fillStyle='#2a2a4a';
+  ctx.fillRect(x+w/2-1,y,2,h); ctx.fillRect(x,y+h/2-1,w,2);
 
-  // Stem
-  ctx.fillStyle = COLORS.plant;
-  ctx.fillRect(x - 1, y - 20, 3, 22);
-
-  // Leaves
-  ctx.fillStyle = COLORS.plantLeaf;
-  ctx.fillRect(x - 14, y - 18, 14, 8);
-  ctx.fillRect(x + 2, y - 26, 12, 8);
-  ctx.fillRect(x - 10, y - 32, 12, 8);
-
-  // Leaf veins
-  ctx.fillStyle = COLORS.plant;
-  ctx.fillRect(x - 10, y - 15, 8, 1);
-  ctx.fillRect(x + 4, y - 23, 7, 1);
-}
-
-function drawLamp(ctx, x, y) {
-  // Stand
-  ctx.fillStyle = '#666';
-  ctx.fillRect(x - 2, y, 4, 20);
-  ctx.fillRect(x - 8, y + 18, 16, 3);
-
-  // Shade
-  ctx.fillStyle = '#c8a020';
-  ctx.beginPath();
-  ctx.moveTo(x - 14, y);
-  ctx.lineTo(x + 14, y);
-  ctx.lineTo(x + 8, y - 16);
-  ctx.lineTo(x - 8, y - 16);
-  ctx.closePath();
-  ctx.fill();
-
-  // Glow circle
-  const grad = ctx.createRadialGradient(x, y + 6, 0, x, y + 6, 40);
-  grad.addColorStop(0, 'rgba(255,220,100,0.12)');
-  grad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(x, y + 6, 40, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawCoffee(ctx, x, y) {
-  ctx.fillStyle = COLORS.coffee;
-  ctx.fillRect(x, y, 12, 10);
-  ctx.fillStyle = '#3a1a08';
-  ctx.fillRect(x + 2, y + 2, 8, 4);
-  // Handle
-  ctx.fillStyle = COLORS.coffee;
-  ctx.fillRect(x + 12, y + 2, 3, 5);
-  // Steam
-  ctx.fillStyle = 'rgba(200,200,200,0.4)';
-  ctx.fillRect(x + 3, y - 4, 2, 3);
-  ctx.fillRect(x + 7, y - 6, 2, 5);
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-  ctx.fill();
-}
-
-// ============ CHAR ANIMATION ============
-let animTick = 0;
-function animateChar() {
-  animTick++;
-  if (animTick % 8 === 0) {
-    charFrame = (charFrame + 1) % 4;
-    drawOffice();
+  // Ground glow
+  const h2=new Date().getHours();
+  if(h2>=7&&h2<17){
+    const glow=ctx.createLinearGradient(0,y+h,0,y+h+20);
+    glow.addColorStop(0,'rgba(30,100,200,0.1)'); glow.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=glow; ctx.fillRect(x-10,y+h,w+20,20);
   }
 }
 
-// Idle animation when not typing
-setInterval(() => {
-  if (!state.timerRunning) {
-    charFrame = (charFrame + 1) % 4;
-    if (document.getElementById('workspace-screen').classList.contains('active')) {
-      drawOffice();
-    }
-  }
-}, 600);
-
-// ============ FAKE USERS ============
-function renderUsers() {
-  const list = document.getElementById('users-list');
-  const fakeUsers = [
-    { name: 'ALEX', status: 'deep work', color: '#9d4edd', dot: 'busy' },
-    { name: 'SAM', status: 'break', color: '#ffd700', dot: 'break' },
-  ];
-
-  list.innerHTML = [
-    `<div class="online-user">
-      <canvas class="user-avatar" width="28" height="28" id="av-you"></canvas>
-      <div class="user-info">
-        <div class="user-name">${state.username || 'YOU'}</div>
-        <div class="user-status">online</div>
-      </div>
-      <div class="user-dot"></div>
-    </div>`,
-    ...fakeUsers.map(u => `<div class="online-user">
-      <div style="width:28px;height:28px;background:${u.color}22;border:1px solid ${u.color};display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P';font-size:7px;color:${u.color}">${u.name[0]}</div>
-      <div class="user-info">
-        <div class="user-name">${u.name}</div>
-        <div class="user-status">${u.status}</div>
-      </div>
-      <div class="user-dot ${u.dot}"></div>
-    </div>`)
-  ].join('');
-
-  // Draw mini avatar
-  setTimeout(() => {
-    const av = document.getElementById('av-you');
-    if (av) {
-      const ctx = av.getContext('2d');
-      ctx.fillStyle = COLORS.charBody;
-      ctx.fillRect(9, 14, 10, 10);
-      ctx.fillStyle = COLORS.char;
-      ctx.fillRect(8, 6, 12, 10);
-      ctx.fillStyle = '#000';
-      ctx.fillRect(10, 9, 3, 3);
-      ctx.fillRect(15, 9, 3, 3);
-      ctx.fillStyle = '#c04040';
-      ctx.fillRect(8, 4, 12, 4);
-    }
-  }, 50);
+function drawChar(ctx,x,y,col,name,typing,frame) {
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(x,y+3,9,4,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=col.body; ctx.fillRect(x-6,y-14,12,12);
+  const ao=typing&&frame%2===0?0:typing?2:0;
+  ctx.fillStyle=col.body; ctx.fillRect(x-10,y-12+ao,4,6); ctx.fillRect(x+6,y-12+(typing?2-ao:0),4,6);
+  ctx.fillStyle=col.head; ctx.fillRect(x-7,y-26,14,12);
+  ctx.fillStyle='#000'; ctx.fillRect(x-4,y-22,3,3); ctx.fillRect(x+1,y-22,3,3);
+  ctx.fillStyle=col.hair; ctx.fillRect(x-7,y-28,14,4); ctx.fillRect(x-9,y-26,3,4);
+  if(name){ const sh=name.substring(0,6); const nw=sh.length*5+8; ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.fillRect(x-nw/2,y-38,nw,10); ctx.fillStyle=col.head; ctx.font='7px "Press Start 2P"'; ctx.textAlign='center'; ctx.fillText(sh,x,y-31); ctx.textAlign='left'; }
+  if(typing){ ctx.fillStyle='#0fff50'; ctx.fillRect(x+7,y-28,5,5); }
 }
 
-// ============ FLOAT MESSAGES ============
-function spawnFloatMsg(msg, x, y) {
-  const el = document.createElement('div');
-  el.className = 'float-msg';
-  el.textContent = msg;
-  el.style.left = x + 'px';
-  el.style.top = y + 'px';
-  document.getElementById('office-area').appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+function drawDesk(ctx,x,y,isP) {
+  ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.fillRect(x-2,y+54,124,8);
+  ctx.fillStyle=PC.desk; ctx.fillRect(x,y+16,120,40); ctx.fillStyle=PC.deskTop; ctx.fillRect(x,y+12,120,8);
+  ctx.fillStyle='#2a1a0a'; ctx.fillRect(x+6,y+52,8,10); ctx.fillRect(x+106,y+52,8,10);
+  ctx.fillStyle=PC.monitor; ctx.fillRect(x+30,y-24,60,38); ctx.fillStyle=isP?PC.screenGlow:'#001122'; ctx.fillRect(x+33,y-21,54,32);
+  if(isP){ ctx.fillStyle=PC.screen; for(let i=0;i<4;i++) ctx.fillRect(x+37,y-17+i*7,20+(i%2)*10,3); ctx.fillStyle='#0fff50'; ctx.fillRect(x+37,y+11,8,3); }
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(x+55,y+12,10,4); ctx.fillStyle=PC.chairBack; ctx.fillRect(x+40,y+40,40,18); ctx.fillStyle=PC.chair; ctx.fillRect(x+38,y+54,44,8);
+  if(isP){ ctx.fillStyle='#222233'; ctx.fillRect(x+28,y+18,48,10); ctx.fillStyle='#333344'; for(let k=0;k<8;k++) ctx.fillRect(x+30+k*5,y+20,4,3); for(let k=0;k<7;k++) ctx.fillRect(x+32+k*5,y+24,4,3); }
 }
 
-// ============ VIBE (SIMPLE TONE GEN) ============
-let audioCtx = null;
-let vibeNodes = [];
+function drawPlant(ctx,x,y) {
+  ctx.fillStyle='#6a3a2a'; ctx.fillRect(x-10,y,20,16); ctx.fillStyle='#4a2a1a'; ctx.fillRect(x-12,y,24,5);
+  ctx.fillStyle='#2a1a0a'; ctx.fillRect(x-8,y+2,16,3); ctx.fillStyle=PC.plant; ctx.fillRect(x-1,y-20,3,22);
+  ctx.fillStyle=PC.plantLeaf; ctx.fillRect(x-14,y-18,14,8); ctx.fillRect(x+2,y-26,12,8); ctx.fillRect(x-10,y-32,12,8);
+}
 
-function setVibe(type) {
-  stopVibe();
-  document.getElementById('sb-vibe').textContent = '';
+function drawCoffee(ctx,x,y) {
+  ctx.fillStyle=PC.coffee; ctx.fillRect(x,y,12,10); ctx.fillStyle='#3a1a08'; ctx.fillRect(x+2,y+2,8,4);
+  ctx.fillStyle=PC.coffee; ctx.fillRect(x+12,y+2,3,5); ctx.fillStyle='rgba(200,200,200,0.3)'; ctx.fillRect(x+3,y-4,2,3); ctx.fillRect(x+7,y-6,2,5);
+}
 
-  if (type === 'off') return;
+function spawnFloat(msg,x,y) { const el=document.createElement('div'); el.className='float-msg'; el.textContent=msg; el.style.left=x+'px'; el.style.top=y+'px'; document.getElementById('office-area').appendChild(el); setTimeout(()=>el.remove(),2500); }
 
+// VIBE
+let audioCtx=null,vibeNodes=[];
+function setVibe(t) {
+  stopVibe(); document.getElementById('sb-vibe').textContent=''; if(t==='off') return;
   try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
-    if (type === 'rain') {
-      // White noise for rain
-      const bufSize = audioCtx.sampleRate * 2;
-      const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.15;
-      
-      const src = audioCtx.createBufferSource();
-      src.buffer = buf;
-      src.loop = true;
-      
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.value = 800;
-      filter.Q.value = 0.5;
-      
-      const gain = audioCtx.createGain();
-      gain.gain.value = 0.4;
-      
-      src.connect(filter);
-      filter.connect(gain);
-      gain.connect(audioCtx.destination);
-      src.start();
-      vibeNodes = [src, filter, gain];
-      document.getElementById('sb-vibe').textContent = '🌧 RAIN';
-
-    } else if (type === 'lofi') {
-      // Simple drone notes
-      const notes = [220, 277, 330, 415];
-      notes.forEach((freq, i) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        gain.gain.value = 0.04;
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        vibeNodes.push(osc, gain);
-      });
-      document.getElementById('sb-vibe').textContent = '🎵 LO-FI';
-
-    } else if (type === 'cafe') {
-      // Cafe murmur - layered noise + light tones
-      const bufSize = audioCtx.sampleRate * 3;
-      const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < bufSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * 0.05 +
-          Math.sin(i * 0.003) * 0.02 +
-          Math.sin(i * 0.007) * 0.015;
-      }
-      const src = audioCtx.createBufferSource();
-      src.buffer = buf;
-      src.loop = true;
-      const gain = audioCtx.createGain();
-      gain.gain.value = 0.5;
-      src.connect(gain);
-      gain.connect(audioCtx.destination);
-      src.start();
-      vibeNodes = [src, gain];
-      document.getElementById('sb-vibe').textContent = '☕ CAFÉ';
-    }
-  } catch(e) {
-    document.getElementById('sb-vibe').textContent = '(audio blocked)';
-  }
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(t==='rain'){ const b=audioCtx.createBuffer(1,audioCtx.sampleRate*2,audioCtx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.15; const s=audioCtx.createBufferSource(); s.buffer=b; s.loop=true; const f=audioCtx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=800; f.Q.value=0.5; const g=audioCtx.createGain(); g.gain.value=0.4; s.connect(f); f.connect(g); g.connect(audioCtx.destination); s.start(); vibeNodes=[s,f,g]; document.getElementById('sb-vibe').textContent='🌧 RAIN'; }
+    else if(t==='lofi'){ [220,277,330,415].forEach(fr=>{ const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type='sine'; o.frequency.value=fr; g.gain.value=0.032; o.connect(g); g.connect(audioCtx.destination); o.start(); vibeNodes.push(o,g); }); document.getElementById('sb-vibe').textContent='🎵 LO-FI'; }
+    else if(t==='cafe'){ const b=audioCtx.createBuffer(1,audioCtx.sampleRate*3,audioCtx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.05+Math.sin(i*0.003)*0.02; const s=audioCtx.createBufferSource(); s.buffer=b; s.loop=true; const g=audioCtx.createGain(); g.gain.value=0.5; s.connect(g); g.connect(audioCtx.destination); s.start(); vibeNodes=[s,g]; document.getElementById('sb-vibe').textContent='☕ CAFÉ'; }
+  } catch(e){}
 }
+function stopVibe() { vibeNodes.forEach(n=>{try{n.stop?n.stop():n.disconnect();}catch(e){}}); vibeNodes=[]; if(audioCtx){try{audioCtx.close();}catch(e){} audioCtx=null;} }
 
-function stopVibe() {
-  vibeNodes.forEach(n => { try { n.stop ? n.stop() : n.disconnect(); } catch(e){} });
-  vibeNodes = [];
-  if (audioCtx) { try { audioCtx.close(); } catch(e){} audioCtx = null; }
-}
+function showNotif(msg) { const n=document.getElementById('notif'); n.textContent=msg; n.classList.add('show'); setTimeout(()=>n.classList.remove('show'),3000); }
 
-// ============ NOTIFICATION ============
-function showNotif(msg) {
-  const n = document.getElementById('notif');
-  n.textContent = msg;
-  n.classList.add('show');
-  setTimeout(() => n.classList.remove('show'), 3000);
-}
-
-// ============ KEYBOARD ============
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('clockin-screen').classList.contains('active')) {
-    clockIn();
-  }
-});
-
-// resize
-window.addEventListener('resize', () => {
-  if (document.getElementById('workspace-screen').classList.contains('active')) {
-    initOfficeCanvas();
-  }
-});
+window.addEventListener('load',()=>{ const p=new URLSearchParams(window.location.search); if(p.get('room')) pickMode('join'); });
+window.addEventListener('resize',()=>{ if(document.getElementById('workspace-screen').classList.contains('active')) initCanvas(); });
 </script>
 </body>
 </html>
