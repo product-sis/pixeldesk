@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PixelDesk — Your Virtual Coworking Space</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0a14;
+    --bg2: #0f0f1e;
+    --green: #0fff50;
+    --yellow: #ffd700;
+    --blue: #00d4ff;
+    --purple: #9d4edd;
+    --accent: #e94560;
+    --text: #e0e0e0;
+    --muted: #888;
+    --border: #1e1e36;
+    --card: #0d0d1e;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* SCANLINES — subtle */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* ===== NAV ===== */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 60px;
+    background: rgba(10,10,20,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 40px;
+    z-index: 100;
+  }
+
+  .nav-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 13px;
+    color: var(--green);
+    text-shadow: 0 0 16px rgba(15,255,80,0.4);
+    text-decoration: none;
+  }
+
+  .nav-cta {
+    margin-left: auto;
+    padding: 8px 20px;
+    background: transparent;
+    border: 2px solid var(--green);
+    color: var(--green);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .nav-cta:hover {
+    background: var(--green);
+    color: #000;
+    box-shadow: 0 0 16px rgba(15,255,80,0.3);
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 100px 20px 60px;
+    position: relative;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  /* Grid bg */
+  .hero::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(15,255,80,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15,255,80,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* Glow orbs */
+  .hero-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+  .hero-glow-1 { width: 500px; height: 500px; background: rgba(15,255,80,0.06); top: -100px; left: -150px; }
+  .hero-glow-2 { width: 400px; height: 400px; background: rgba(0,212,255,0.05); bottom: -80px; right: -100px; }
+
+  .hero-content { position: relative; z-index: 1; max-width: 680px; }
+
+  .hero-eyebrow {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--green);
+    letter-spacing: 3px;
+    margin-bottom: 24px;
+    opacity: 0.8;
+  }
+
+  .hero-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(22px, 4vw, 36px);
+    color: #fff;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    text-shadow: 0 0 40px rgba(255,255,255,0.1);
+  }
+
+  .hero-title span { color: var(--green); }
+
+  .hero-sub {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 480px;
+    margin: 0 auto 40px;
+    line-height: 1.7;
+  }
+
+  .hero-cta {
+    display: inline-block;
+    padding: 16px 36px;
+    background: var(--green);
+    color: #000;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .hero-cta::after { content:''; position:absolute; bottom:0; left:0; right:0; height:4px; background:rgba(0,0,0,0.25); }
+  .hero-cta:hover {
+    background: #fff;
+    box-shadow: 0 0 30px rgba(15,255,80,0.4);
+    transform: translateY(-3px);
+  }
+  .hero-cta:active { transform: translateY(0); }
+
+  .hero-note {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* PIXEL SCENE PREVIEW */
+  .hero-preview {
+    margin-top: 60px;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 700px;
+  }
+
+  .preview-frame {
+    background: var(--card);
+    border: 2px solid var(--border);
+    padding: 0;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .preview-topbar {
+    background: #0d0d20;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .preview-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .preview-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--green);
+    margin-left: 6px;
+  }
+
+  .preview-canvas-wrap {
+    width: 100%;
+    height: 180px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas#hero-canvas {
+    display: block;
+    image-rendering: pixelated;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ===== SECTION SHARED ===== */
+  section {
+    padding: 100px 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--green);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    opacity: 0.7;
+  }
+
+  .section-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(14px, 2.5vw, 20px);
+    color: #fff;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .section-sub {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 500px;
+    line-height: 1.7;
+    margin-bottom: 56px;
+  }
+
+  /* ===== FEATURES ===== */
+  #features { border-top: 1px solid var(--border); }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 2px;
+    background: var(--border);
+    border: 2px solid var(--border);
+  }
+
+  .feature-card {
+    background: var(--card);
+    padding: 32px 28px;
+    transition: background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: transparent;
+    transition: background 0.2s;
+  }
+
+  .feature-card:hover { background: #10101e; }
+  .feature-card.solo:hover::before { background: var(--green); }
+  .feature-card.create:hover::before { background: var(--yellow); }
+  .feature-card.join:hover::before { background: var(--purple); }
+
+  .feature-icon {
+    font-size: 36px;
+    margin-bottom: 20px;
+    display: block;
+  }
+
+  .feature-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    margin-bottom: 12px;
+    line-height: 1.6;
+  }
+
+  .feature-card.solo .feature-title { color: var(--green); }
+  .feature-card.create .feature-title { color: var(--yellow); }
+  .feature-card.join .feature-title { color: var(--purple); }
+
+  .feature-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* ===== HOW IT WORKS ===== */
+  #how { border-top: 1px solid var(--border); }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  .steps::before {
+    content: '';
+    position: absolute;
+    left: 23px; top: 24px; bottom: 24px;
+    width: 2px;
+    background: var(--border);
+  }
+
+  .step {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    padding: 28px 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    width: 48px; height: 48px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--card);
+    border: 2px solid var(--border);
+    position: relative; z-index: 1;
+    transition: all 0.2s;
+  }
+
+  .step:hover .step-num { border-color: var(--green); color: var(--green); }
+
+  .step-content { padding-top: 8px; }
+
+  .step-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: #fff;
+    margin-bottom: 8px;
+    line-height: 1.6;
+  }
+
+  .step-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* ===== SOCIAL PROOF ===== */
+  #proof { border-top: 1px solid var(--border); }
+
+  .proof-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 2px;
+    background: var(--border);
+    border: 2px solid var(--border);
+  }
+
+  .proof-stat {
+    background: var(--card);
+    padding: 32px 24px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 24px;
+    color: var(--green);
+    display: block;
+    margin-bottom: 10px;
+    text-shadow: 0 0 16px rgba(15,255,80,0.3);
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ===== CTA SECTION ===== */
+  #cta {
+    border-top: 1px solid var(--border);
+    text-align: center;
+    padding: 120px 20px;
+  }
+
+  #cta .section-sub { margin: 0 auto 40px; }
+
+  /* ===== FOOTER ===== */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 100%;
+  }
+
+  .footer-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--green);
+    opacity: 0.6;
+  }
+
+  .footer-note {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* FADE IN ANIMATION */
+  .fade-up {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .fade-up.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    nav { padding: 0 20px; }
+    section { padding: 60px 20px; }
+    .hero { padding: 100px 20px 40px; }
+    footer { flex-direction: column; gap: 12px; text-align: center; }
+    .steps::before { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">PIXELDESK</a>
+  <a href="app.html" class="nav-cta">► ENTER THE OFFICE</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-glow hero-glow-1"></div>
+  <div class="hero-glow hero-glow-2"></div>
+
+  <div class="hero-content">
+    <div class="hero-eyebrow">► VIRTUAL COWORKING SPACE</div>
+    <h1 class="hero-title">Clock in.<br>Focus up.<span style="color:var(--green)"><br>Get it done.</span></h1>
+    <p class="hero-sub">A pixel-art workspace where you can work solo or alongside your crew — with timers, tasks, and real-time presence built in.</p>
+    <a href="app.html" class="hero-cta">► ENTER THE OFFICE ◄</a>
+    <p class="hero-note">Free to use &nbsp;·&nbsp; No account needed &nbsp;·&nbsp; Share a link to invite</p>
+  </div>
+
+  <div class="hero-preview">
+    <div class="preview-frame">
+      <div class="preview-topbar">
+        <div class="preview-dot" style="background:#e94560"></div>
+        <div class="preview-dot" style="background:#ffd700"></div>
+        <div class="preview-dot" style="background:#0fff50"></div>
+        <span class="preview-title">PIXELDESK — DEEP FOCUS</span>
+      </div>
+      <div class="preview-canvas-wrap">
+        <canvas id="hero-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="fade-up">
+    <div class="section-label">► WHAT YOU CAN DO</div>
+    <h2 class="section-title">Work your way.</h2>
+    <p class="section-sub">Whether you're grinding solo or keeping each other accountable with friends — PixelDesk has a mode for it.</p>
+  </div>
+  <div class="feature-grid fade-up">
+    <div class="feature-card solo">
+      <span class="feature-icon">🧑‍💻</span>
+      <div class="feature-title">SOLO FOCUS</div>
+      <p class="feature-desc">Set your tasks, pick a session length, and clock in. The Pomodoro timer keeps you honest. Your character sits at their desk and types while you work.</p>
+    </div>
+    <div class="feature-card create">
+      <span class="feature-icon">🏠</span>
+      <div class="feature-title">CREATE A ROOM</div>
+      <p class="feature-desc">Start a shared session in seconds. You get a 6-character room code and an invite link. Share it with your crew and watch their avatars appear in your office.</p>
+    </div>
+    <div class="feature-card join">
+      <span class="feature-icon">🚪</span>
+      <div class="feature-title">JOIN A ROOM</div>
+      <p class="feature-desc">Got a code or link from someone? Jump straight in. Add your tasks, pick your session, and you're live alongside everyone else in real time.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="fade-up">
+    <div class="section-label">► HOW IT WORKS</div>
+    <h2 class="section-title">From zero to<br>focused in 30 seconds.</h2>
+    <p class="section-sub">No downloads, no accounts, no friction. Just open the link and start working.</p>
+  </div>
+  <div class="steps fade-up">
+    <div class="step">
+      <div class="step-num" style="color:var(--green)">01</div>
+      <div class="step-content">
+        <div class="step-title">PICK YOUR MODE</div>
+        <p class="step-desc">Go solo for distraction-free focus, create a room to invite your team, or join a friend's session with their code. One tap, no setup.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="color:var(--yellow)">02</div>
+      <div class="step-content">
+        <div class="step-title">SET YOUR QUESTS</div>
+        <p class="step-desc">Enter up to 10 tasks for the session. Declare what you're working on before you start — it keeps you accountable and gives you a clear finish line.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="color:var(--blue)">03</div>
+      <div class="step-content">
+        <div class="step-title">CLOCK IN & FOCUS</div>
+        <p class="step-desc">Your pixel character takes their seat. Start the timer, check off tasks as you go, take breaks when you need them. Clock out when you're done and see your focus score.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="color:var(--purple)">04</div>
+      <div class="step-content">
+        <div class="step-title">WORK WITH OTHERS</div>
+        <p class="step-desc">In room mode, see your crew's avatars in real time. Chat between sessions, see who's focusing and who's on a break. The café effect — digitally.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT'S INSIDE -->
+<section id="proof" style="border-top:1px solid var(--border)">
+  <div class="fade-up">
+    <div class="section-label">► WHAT'S INSIDE</div>
+    <h2 class="section-title">Everything you need.<br>Nothing you don't.</h2>
+    <p class="section-sub">Built lean on purpose. No bloat, no account walls, no upsells.</p>
+  </div>
+  <div class="proof-grid fade-up">
+    <div class="proof-stat">
+      <span class="stat-num">3</span>
+      <span class="stat-label">Session modes — Pomodoro, Deep Work, Flow State</span>
+    </div>
+    <div class="proof-stat">
+      <span class="stat-num">10</span>
+      <span class="stat-label">Tasks per session with live progress tracking</span>
+    </div>
+    <div class="proof-stat">
+      <span class="stat-num">∞</span>
+      <span class="stat-label">Rooms — create one in seconds, share a link</span>
+    </div>
+    <div class="proof-stat">
+      <span class="stat-num">0</span>
+      <span class="stat-label">Accounts needed. Just open and work.</span>
+    </div>
+  </div>
+
+  <!-- FEATURES LIST -->
+  <div style="margin-top:2px;background:var(--border)">
+    <div style="background:var(--card);padding:32px 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <span style="color:var(--green);font-family:'Press Start 2P',monospace;font-size:9px;flex-shrink:0;margin-top:2px">✓</span>
+        <span style="font-size:14px;color:var(--muted)">Pixel-art office with animated characters</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <span style="color:var(--green);font-family:'Press Start 2P',monospace;font-size:9px;flex-shrink:0;margin-top:2px">✓</span>
+        <span style="font-size:14px;color:var(--muted)">Time-of-day window — day, dusk, night, dawn</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <span style="color:var(--green);font-family:'Press Start 2P',monospace;font-size:9px;flex-shrink:0;margin-top:2px">✓</span>
+        <span style="font-size:14px;color:var(--muted)">Ambient vibe sounds — lo-fi, rain, café</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <span style="color:var(--green);font-family:'Press Start 2P',monospace;font-size:9px;flex-shrink:0;margin-top:2px">✓</span>
+        <span style="font-size:14px;color:var(--muted)">Real-time room chat for coworking sessions</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <span style="color:var(--green);font-family:'Press Start 2P',monospace;font-size:9px;flex-shrink:0;margin-top:2px">✓</span>
+        <span style="font-size:14px;color:var(--muted)">Focus score at the end of every session</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <span style="color:var(--green);font-family:'Press Start 2P',monospace;font-size:9px;flex-shrink:0;margin-top:2px">✓</span>
+        <span style="font-size:14px;color:var(--muted)">Works on any device — just a browser link</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="fade-up">
+    <div class="section-label" style="text-align:center">► READY?</div>
+    <h2 class="section-title">Your desk is waiting.</h2>
+    <p class="section-sub">Open the office, set your tasks, and clock in. It takes 30 seconds.</p>
+    <a href="app.html" class="hero-cta">► ENTER THE OFFICE ◄</a>
+    <p class="hero-note" style="margin-top:16px">Free &nbsp;·&nbsp; No sign up &nbsp;·&nbsp; Works instantly</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">PIXELDESK</span>
+  <span class="footer-note">Built for people who get things done.</span>
+</footer>
+
+<script>
+// ===== HERO CANVAS PREVIEW =====
+function initHeroCanvas() {
+  const canvas = document.getElementById('hero-canvas');
+  const wrap = canvas.parentElement;
+  const W = wrap.clientWidth;
+  const H = wrap.clientHeight;
+  canvas.width = W;
+  canvas.height = H;
+
+  const ctx = canvas.getContext('2d');
+  const TILE = 28;
+
+  // Floor
+  for (let y = 0; y < Math.ceil(H/TILE)+1; y++) {
+    for (let x = 0; x < Math.ceil(W/TILE)+1; x++) {
+      ctx.fillStyle = (x+y)%2===0 ? '#1e1e3a' : '#181830';
+      ctx.fillRect(x*TILE, y*TILE, TILE, TILE);
+    }
+  }
+
+  // Rug
+  ctx.fillStyle = '#2a1a2a';
+  ctx.fillRect(W/2-120, H/2-50, 240, 110);
+  ctx.strokeStyle = '#3a2a3a'; ctx.lineWidth = 2;
+  ctx.strokeRect(W/2-110, H/2-40, 220, 90);
+
+  // Wall
+  ctx.fillStyle = '#0d0d20';
+  ctx.fillRect(0, 0, W, 60);
+  ctx.fillStyle = '#1a1a35';
+  ctx.fillRect(0, 58, W, 3);
+
+  // Window — day sky
+  const wx = W/2 - 80, wy = 5, ww = 160, wh = 50;
+  ctx.fillStyle = '#2a2a4a'; ctx.fillRect(wx, wy, ww, wh);
+  const sky = ctx.createLinearGradient(wx,wy,wx,wy+wh);
+  sky.addColorStop(0,'#0a2a5a'); sky.addColorStop(1,'#1a6aaa');
+  ctx.fillStyle = sky; ctx.fillRect(wx+3,wy+3,ww-6,wh-6);
+  // clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  [[10,10,30,8],[80,8,40,10],[120,14,25,7]].forEach(([cx,cy,cw,ch])=>{
+    ctx.beginPath(); ctx.ellipse(wx+3+cx,wy+3+cy,cw,ch,0,0,Math.PI*2); ctx.fill();
+  });
+  // sun
+  const sg = ctx.createRadialGradient(wx+130,wy+12,0,wx+130,wy+12,10);
+  sg.addColorStop(0,'#ffe066'); sg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(wx+130,wy+12,10,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#2a2a4a'; ctx.fillRect(wx+ww/2-1,wy,2,wh); ctx.fillRect(wx,wy+wh/2-1,ww,2);
+
+  // Desks
+  drawHeroDesk(ctx, W/2-55, H/2-35, true);
+  drawHeroDesk(ctx, W*0.2-55, H/2-28, false);
+  drawHeroDesk(ctx, W*0.8-55, H/2-28, false);
+
+  // Characters
+  const colors = [
+    {head:'#e94560',body:'#3a3a6a',hair:'#c04040'},
+    {head:'#9d4edd',body:'#2a2a5a',hair:'#5a1a9a'},
+    {head:'#ffd700',body:'#1a3a1a',hair:'#b8860b'},
+  ];
+  drawHeroChar(ctx, W/2, H/2+22, colors[0], true);
+  drawHeroChar(ctx, W*0.2, H/2+18, colors[1], false);
+  drawHeroChar(ctx, W*0.8, H/2+18, colors[2], false);
+
+  // Plants
+  drawHeroPlant(ctx, 40, H/2+10);
+  drawHeroPlant(ctx, W-50, H/2+10);
+}
+
+function drawHeroDesk(ctx, x, y, isP) {
+  ctx.fillStyle = '#3d2b1a'; ctx.fillRect(x, y+12, 110, 34);
+  ctx.fillStyle = '#4a3520'; ctx.fillRect(x, y+8, 110, 6);
+  ctx.fillStyle = '#2a1a0a'; ctx.fillRect(x+5,y+44,7,8); ctx.fillRect(x+98,y+44,7,8);
+  ctx.fillStyle = '#111'; ctx.fillRect(x+28,y-18,54,32);
+  ctx.fillStyle = isP ? '#003344' : '#001122'; ctx.fillRect(x+31,y-15,48,26);
+  if(isP){ ctx.fillStyle='#00d4ff'; for(let i=0;i<3;i++) ctx.fillRect(x+35,y-11+i*7,18+(i%2)*8,2); ctx.fillStyle='#0fff50'; ctx.fillRect(x+35,y-11+3*7,6,2); }
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(x+50,y+8,8,3);
+  ctx.fillStyle='#2a2a5a'; ctx.fillRect(x+36,y+32,38,14);
+  ctx.fillStyle='#222244'; ctx.fillRect(x+34,y+44,42,6);
+}
+
+function drawHeroChar(ctx, x, y, col, typing) {
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(x,y+2,8,3,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=col.body; ctx.fillRect(x-5,y-11,10,10);
+  ctx.fillStyle=col.body; ctx.fillRect(x-8,y-10,3,5); ctx.fillRect(x+5,y-10,3,5);
+  ctx.fillStyle=col.head; ctx.fillRect(x-6,y-21,12,10);
+  ctx.fillStyle='#000'; ctx.fillRect(x-3,y-17,2,2); ctx.fillRect(x+1,y-17,2,2);
+  ctx.fillStyle=col.hair; ctx.fillRect(x-6,y-23,12,3);
+  if(typing){ ctx.fillStyle='#0fff50'; ctx.fillRect(x+5,y-22,4,4); }
+}
+
+function drawHeroPlant(ctx, x, y) {
+  ctx.fillStyle='#6a3a2a'; ctx.fillRect(x-8,y,16,12);
+  ctx.fillStyle='#1a4a1a'; ctx.fillRect(x-1,y-14,2,16);
+  ctx.fillStyle='#2d8a2d'; ctx.fillRect(x-10,y-12,10,6); ctx.fillRect(x+2,y-18,9,6);
+}
+
+// ===== SCROLL FADE =====
+function initScrollFade() {
+  const els = document.querySelectorAll('.fade-up');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.15 });
+  els.forEach(el => obs.observe(el));
+}
+
+window.addEventListener('load', () => {
+  initHeroCanvas();
+  initScrollFade();
+  // Make hero content visible immediately
+  document.querySelectorAll('.hero .fade-up').forEach(el => el.classList.add('visible'));
+});
+
+window.addEventListener('resize', initHeroCanvas);
+</script>
+</body>
+</html>
